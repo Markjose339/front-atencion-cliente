@@ -7,6 +7,7 @@ import {
   Command,
   DollarSign,
   Frame,
+  Headset,
   Home,
   LayoutGrid,
   LifeBuoy,
@@ -60,6 +61,11 @@ const data = {
       title: "Permisos",
       url: "/permissions",
       icon: Shield,
+    },
+      {
+      title: "Ventanillas",
+      url: "/service-windows",
+      icon: Headset,
     },
   ],
   navSecondary: [

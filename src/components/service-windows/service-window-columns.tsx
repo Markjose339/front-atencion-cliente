@@ -4,9 +4,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Permission } from "@/types/permission";
-import { PermissionActions } from "@/components/permissions/permission-actions";
+import { ServiceWindowActions } from "./service-window-actions";
 
-export const permissionColumns = (): ColumnDef<Permission>[] => [
+export const serviceWindowColumns = (): ColumnDef<Permission>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => {
@@ -52,8 +52,8 @@ export const permissionColumns = (): ColumnDef<Permission>[] => [
     id: "actions",
     header: "Acciones",
     cell: ({ row }) => {
-      const permission = row.original;
-      return <PermissionActions permission={permission} />;
+      const serviceWindow = row.original;
+      return <ServiceWindowActions serviceWindow={serviceWindow} />;
     },
   },
 ];

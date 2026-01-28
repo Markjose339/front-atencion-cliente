@@ -112,8 +112,11 @@ export const roleColumns = (): ColumnDef<Role>[] => [
       </Button>
     ),
     cell: ({ getValue }) => {
-      const date = new Date(getValue() as string);
-      return date.toLocaleDateString("es-ES", {
+      const dateString = getValue() as string;
+      const date = new Date(dateString);
+      const adjustedDate = new Date(date.getTime() + (4 * 60 * 60 * 1000));
+
+      return adjustedDate.toLocaleDateString("es-ES", {
         year: "numeric",
         month: "short",
         day: "numeric",
