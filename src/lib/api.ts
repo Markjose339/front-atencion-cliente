@@ -44,7 +44,7 @@ const refreshToken = async (): Promise<boolean> => {
   isRefreshing = true;
 
   try {
-    const res: Response = await fetch(`${API_URL}/auth/refresh`, {
+    const res: Response = await fetch(`${API_URL}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -64,7 +64,7 @@ const refreshToken = async (): Promise<boolean> => {
 };
 
 const shouldSkipRefresh = (endpoint: string): boolean =>
-  ['/auth/login', '/auth/logout', '/auth/refresh'].some(path =>
+  ['/api/auth/login', '/api/auth/logout', '/api/auth/refresh'].some(path =>
     endpoint.includes(path),
   );
 
@@ -99,7 +99,7 @@ const apiFetch = async <T>(
   };
 
   try {
-    const res: Response = await fetch(`${API_URL}${endpoint}`, finalConfig);
+    const res: Response = await fetch(`${API_URL}/api${endpoint}`, finalConfig);
 
     if (res.status === 401 && retry && !shouldSkipRefresh(endpoint)) {
       const refreshed: boolean = await refreshToken();

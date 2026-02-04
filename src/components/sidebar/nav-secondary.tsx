@@ -8,7 +8,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { ModeToggle } from '@/components/mode-toggle';
+import { ModeToggleDashboard } from '@/components/mode-toggle-dashboard';
 
 export function NavSecondary({
   items,
@@ -23,7 +23,7 @@ export function NavSecondary({
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>
-        <ModeToggle />
+        <ModeToggleDashboard />
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>

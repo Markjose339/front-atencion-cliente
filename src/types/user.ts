@@ -6,6 +6,10 @@ export interface User {
   phone: string;
   isActive: boolean;
   createdAt: Date;
+  serviceWindow: {
+    id: string;
+    name: string;
+  };
   roles: {
     id: string;
     name: string;

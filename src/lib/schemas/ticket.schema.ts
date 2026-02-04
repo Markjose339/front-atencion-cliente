@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const TicketTypeEnumSchema = z.enum(['REGULAR', 'PREFERENTIAL'], {
-  message: 'El tipo de ticket debe ser REGULAR o PREFERENTIAL'
+export const TicketTypeEnumSchema = z.enum(['REGULAR', 'PREFERENCIAL'], {
+  message: 'El tipo de ticket debe ser REGULAR o PREFERENCIAL'
 });
 
 export const TicketSchema = z.object({

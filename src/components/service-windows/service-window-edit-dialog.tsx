@@ -22,9 +22,8 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { PermissionSchema, PermissionSchemaType } from "@/lib/schemas/permission.schema";
 import { ServiceWindow } from "@/types/service-window";
-import { ServiceWindowsSchemaType } from "@/lib/schemas/service-windows.schema";
+import { ServiceWindowsSchema, ServiceWindowsSchemaType } from "@/lib/schemas/service-windows.schema";
 import { useServiceWindowsMutation } from "@/hooks/use-service-windows";
 
 interface ServiceWindowEditDialogProps {
@@ -36,10 +35,11 @@ interface ServiceWindowEditDialogProps {
 export default function ServiceWindowEditDialog({ serviceWindow, open, onOpenChange }: ServiceWindowEditDialogProps) {
   const { update } = useServiceWindowsMutation()
 
-  const form = useForm<PermissionSchemaType>({
-    resolver: zodResolver(PermissionSchema),
+  const form = useForm<ServiceWindowsSchemaType>({
+    resolver: zodResolver(ServiceWindowsSchema),
     defaultValues: {
       name: serviceWindow.name,
+      code: serviceWindow.code,
     },
   })
 
@@ -47,6 +47,7 @@ export default function ServiceWindowEditDialog({ serviceWindow, open, onOpenCha
     if (open && serviceWindow) {
       form.reset({
         name: serviceWindow.name,
+        code: serviceWindow.code,
       })
     }
   }, [open, serviceWindow, form])
@@ -82,6 +83,24 @@ export default function ServiceWindowEditDialog({ serviceWindow, open, onOpenCha
                   <FormControl>
                     <Input
                       placeholder="Nombre de la ventanilla (ej: ventanilla 1)"
+                      {...field}
+                      disabled={update.isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Codigo de la ventanilla</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Codigo de la ventanilla (ej: DD)"
                       {...field}
                       disabled={update.isPending}
                     />

@@ -2,24 +2,18 @@
 
 import * as React from "react"
 import {
-  BarChart3,
-  Boxes,
   Command,
-  DollarSign,
   Frame,
   Headset,
-  Home,
-  LayoutGrid,
-  LifeBuoy,
+  Home, LifeBuoy,
   Map,
-  Package,
+  MessageSquare,
   PieChart,
   Send,
   Shield,
-  Truck,
+  Ticket,
   UserCog,
   Users,
-  Warehouse,
 } from "lucide-react"
 
 import { NavMain } from "@/components/sidebar/nav-main"
@@ -62,11 +56,16 @@ const data = {
       url: "/permissions",
       icon: Shield,
     },
-      {
+    {
       title: "Ventanillas",
       url: "/service-windows",
-      icon: Headset,
+      icon: Ticket,
     },
+    {
+      title: "Atencion al Cliente",
+      url: "/customer-service",
+      icon: MessageSquare,
+    }
   ],
   navSecondary: [
     {
@@ -124,7 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser/>
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   )

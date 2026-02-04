@@ -8,6 +8,7 @@ import { PlusCircle } from "lucide-react"
 
 import { useRolesQuery } from "@/hooks/use-roles"
 import { useUsersMutation } from "@/hooks/use-users"
+import { useServiceWindowsQuery } from "@/hooks/use-service-windows"
 
 import { UserCreateSchemaType, UserSchema } from "@/lib/schemas/user.schema"
 
@@ -42,15 +43,34 @@ import {
 } from "@/components/ui/paginated-checkbox-list"
 import { Label } from "../ui/label"
 import { PasswordInput } from "../ui/passwrod-input"
+import { PaginatedCommandSelect } from "../ui/paginated-command-select"
+
+const ITEMS_PER_PAGE = 10
 
 export function UserCreateDialog() {
   const [open, setOpen] = useState(false)
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
-  const limit = 10
+
+  // Estados independientes para roles
+  const [rolesPage, setRolesPage] = useState(1)
+  const [rolesSearch, setRolesSearch] = useState("")
+
+  // Estados independientes para ventanillas de servicio
+  const [serviceWindowsPage, setServiceWindowsPage] = useState(1)
+  const [serviceWindowsSearch, setServiceWindowsSearch] = useState("")
 
   const { create } = useUsersMutation()
-  const { findAll } = useRolesQuery({ page, limit, search })
+  
+  const { findAll: findAllRoles } = useRolesQuery({ 
+    page: rolesPage, 
+    limit: ITEMS_PER_PAGE, 
+    search: rolesSearch 
+  })
+
+  const { findAllServiceWindows } = useServiceWindowsQuery({ 
+    page: serviceWindowsPage, 
+    limit: ITEMS_PER_PAGE, 
+    search: serviceWindowsSearch 
+  })
 
   const form = useForm<UserCreateSchemaType>({
     resolver: zodResolver(UserSchema),
@@ -62,6 +82,7 @@ export function UserCreateDialog() {
       phone: "",
       isActive: true,
       roleIds: [],
+      serviceWindowId: undefined,
     },
   })
 
@@ -69,30 +90,46 @@ export function UserCreateDialog() {
     toast.promise(create.mutateAsync(values), {
       loading: "Creando usuario...",
       success: (data) => {
-        setOpen(false)
-        form.reset()
+        handleOpenChange(false)
         return `Usuario "${data.name}" creado exitosamente`
       },
       error: (error: Error) => error.message,
     })
   }
 
-  const totalPages = findAll.data?.meta.totalPages ?? 1
-
   const roles = useMemo<PaginatedItem[]>(() => {
-    return findAll.data?.data.map((role) => ({
+    return findAllRoles.data?.data.map((role) => ({
       id: role.id,
       label: role.name,
     })) ?? []
-  }, [findAll.data])
-  
+  }, [findAllRoles.data])
+
+  const serviceWindows = useMemo<PaginatedItem[]>(() => {
+    return findAllServiceWindows.data?.data.map((window) => ({
+      id: window.id,
+      label: window.name,
+    })) ?? []
+  }, [findAllServiceWindows.data])
+
   const handleOpenChange = (value: boolean) => {
     setOpen(value)
     if (!value) {
       form.reset()
-      setPage(1)
-      setSearch("")
+      setRolesPage(1)
+      setRolesSearch("")
+      setServiceWindowsPage(1)
+      setServiceWindowsSearch("")
     }
+  }
+
+  const handleRolesSearchChange = (value: string) => {
+    setRolesSearch(value)
+    setRolesPage(1)
+  }
+
+  const handleServiceWindowsSearchChange = (value: string) => {
+    setServiceWindowsSearch(value)
+    setServiceWindowsPage(1)
   }
 
   return (
@@ -104,7 +141,7 @@ export function UserCreateDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto ">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-1">
           <DialogTitle>Crear nuevo usuario</DialogTitle>
           <DialogDescription>
@@ -175,7 +212,7 @@ export function UserCreateDialog() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Teléfono
+                      Teléfono{" "}
                       <span className="text-muted-foreground font-normal text-sm">
                         (opcional)
                       </span>
@@ -200,7 +237,7 @@ export function UserCreateDialog() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Dirección
+                    Dirección{" "}
                     <span className="text-muted-foreground font-normal text-sm">
                       (opcional)
                     </span>
@@ -216,30 +253,55 @@ export function UserCreateDialog() {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="serviceWindowId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ventanilla de servicio</FormLabel>
+                  <FormControl>
+                    <PaginatedCommandSelect
+                      items={serviceWindows}
+                      value={field.value}
+                      search={serviceWindowsSearch}
+                      page={serviceWindowsPage}
+                      totalPages={findAllServiceWindows.data?.meta.totalPages ?? 1}
+                      isLoading={findAllServiceWindows.isLoading}
+                      onChange={field.onChange}
+                      onSearchChange={handleServiceWindowsSearchChange}
+                      onPageChange={setServiceWindowsPage}
+                      placeholder="Seleccione una ventanilla..."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="roleIds"
               render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>Roles</FormLabel>
-                  <FormDescription>Seleccione los roles a asignar</FormDescription>
+                  <FormDescription>
+                    Seleccione los roles a asignar al usuario
+                  </FormDescription>
                   <PaginatedCheckboxList
                     items={roles}
                     selectedIds={field.value}
-                    page={page}
-                    totalPages={totalPages}
-                    search={search}
-                    isLoading={findAll.isLoading}
-                    onSearchChange={(value) => {
-                      setSearch(value)
-                      setPage(1)
-                    }}
-                    onPageChange={setPage}
+                    page={rolesPage}
+                    totalPages={findAllRoles.data?.meta.totalPages ?? 1}
+                    search={rolesSearch}
+                    isLoading={findAllRoles.isLoading}
+                    onSearchChange={handleRolesSearchChange}
+                    onPageChange={setRolesPage}
                     onToggle={(id, checked) => {
                       field.onChange(
                         checked
                           ? [...field.value, id]
-                          : field.value.filter((v) => v !== id),
+                          : field.value.filter((v) => v !== id)
                       )
                     }}
                     hasError={!!fieldState.error}
@@ -248,6 +310,7 @@ export function UserCreateDialog() {
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="isActive"
@@ -255,16 +318,13 @@ export function UserCreateDialog() {
                 <FormItem>
                   <FormControl>
                     <Label
-                      className="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 
-                        has-aria-checked:border-blue-600 has-aria-checked:bg-blue-50
-                        dark:has-aria-checked:border-blue-900 dark:has-aria-checked:bg-blue-950"
+                      className="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors
+                        has-checked:border-primary has-checked:bg-primary/5"
                     >
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         disabled={create.isPending}
-                        className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white 
-                        dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
                       />
 
                       <div className="grid gap-1.5 font-normal">
@@ -276,7 +336,6 @@ export function UserCreateDialog() {
                         </p>
                       </div>
                     </Label>
-
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -285,7 +344,7 @@ export function UserCreateDialog() {
 
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline" type="button">
+                <Button variant="outline" type="button" disabled={create.isPending}>
                   Cancelar
                 </Button>
               </DialogClose>

@@ -1,211 +1,181 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Loader2, Package, Ticket } from "lucide-react"
-
-import { TicketSchema, TicketSchemaType } from "@/lib/schemas/ticket.schema"
-import { useTicketsMutation } from "@/hooks/use-tickets"
-
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
+  Loader2,
+  Package,
+  Ticket,
+  ArrowLeft,
+  Star,
+  ArrowRight,
+} from "lucide-react"
+
+import { useTicketsMutation } from "@/hooks/use-tickets"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Separator } from "@/components/ui/separator"
+import { FullscreenButton } from "../ui/fullscreen-button"
+import { ChoiceCard } from "./choice-card"
 
-import {
-  Field,
-  FieldContent,
-  FieldDescription as ChoiceDescription,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field"
-
-const DEFAULT_VALUES: TicketSchemaType = {
-  packageCode: "",
-  type: "REGULAR",
-}
+type TicketType = "REGULAR" | "PREFERENCIAL"
+type Step = "package" | "type"
 
 export function TicketCreate() {
+  const [step, setStep] = useState<Step>("package")
+  const [packageCode, setPackageCode] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
   const { create } = useTicketsMutation()
 
-  const form = useForm<TicketSchemaType>({
-    resolver: zodResolver(TicketSchema),
-    defaultValues: DEFAULT_VALUES,
-  })
+  const resetForm = () => {
+    setStep("package")
+    setPackageCode("")
+    setError("")
+    setLoading(false)
+  }
 
-  const onSubmit = async (values: TicketSchemaType) => {
+  const handlePackageSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!packageCode.trim()) {
+      setError("El código de paquete es requerido")
+      return
+    }
+    setError("")
+    setStep("type")
+  }
+
+  const handleTypeSelect = async (type: TicketType) => {
     setLoading(true)
 
-    toast
-      .promise(create.mutateAsync(values), {
-        loading: "Generando ticket...",
-        success: () => {
-          form.reset(DEFAULT_VALUES)
-          setLoading(false)
-          return "Ticket creado exitosamente"
-        },
-        error: () => {
-          setLoading(false)
-          form.reset(DEFAULT_VALUES)
-          return "Error al crear el ticket. Intente nuevamente."
-        },
-      })
+    toast.promise(create.mutateAsync({
+      packageCode: packageCode.trim(),
+      type,
+    }), {
+      success: (data) => {
+        resetForm()
+        return `Ticket "${data.code}" creado exitosamente`
+      },
+      error: (error: Error) => {
+        resetForm()
+        return error.message
+      }
+    })
   }
 
   return (
-    <Card className="mx-auto w-full max-w-md shadow-sm">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Ticket className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">Nuevo Ticket</CardTitle>
-        </div>
-        <CardDescription>
-          Complete los datos para generar un ticket de atención
-        </CardDescription>
-      </CardHeader>
+    <main className="relative flex min-h-screen w-full flex-col items-center justify-center bg-linear-to-b from-background to-muted/30 px-4 sm:px-6 md:px-10 py-8 sm:py-10 md:py-14">
+      <FullscreenButton />
+      <div className="mb-6 sm:mb-8 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-primary/10 shadow-sm">
+        <Ticket className="h-8 w-8 sm:h-11 sm:w-11 text-primary" />
+      </div>
+      <h1 className="mb-2 text-center font-extrabold tracking-tight text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
+        Generar Ticket
+      </h1>
+      <p className="mb-8 sm:mb-10 md:mb-14 max-w-xl sm:max-w-2xl text-center text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground">
+        {step === "package"
+          ? "Ingrese el código del paquete"
+          : "Seleccione el tipo de atención"}
+      </p>
 
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="packageCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Código de paquete
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="PAQ-2024-001"
-                      className="font-mono tracking-wide"
-                      disabled={loading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+      {step === "package" ? (
+        <form
+          onSubmit={handlePackageSubmit}
+          className="w-full max-w-full sm:max-w-xl md:max-w-2xl space-y-6 sm:space-y-8 md:space-y-10 rounded-2xl sm:rounded-3xl border bg-card p-6 sm:p-8 md:p-12 shadow-lg"
+        >
+          <div className="space-y-3 sm:space-y-4">
+            <label className="flex justify-center items-center gap-3 font-semibold text-base sm:text-lg">
+              <Package className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              Código de paquete
+            </label>
+
+            <Input
+              value={packageCode}
+              onChange={(e) => {
+                setPackageCode(e.target.value)
+                setError("")
+              }}
+              placeholder="PAQ-2024-001"
+              className="
+                w-full text-center font-mono tracking-widest
+                h-14 sm:h-16 md:h-20
+                text-xl sm:text-2xl md:text-3xl lg:text-4xl
+                rounded-xl sm:rounded-2xl
+                border-2
+                focus-visible:ring-2 focus-visible:ring-primary
+              "
+              autoFocus
+              disabled={loading}
             />
 
-            <Separator />
+            {error && (
+              <p className="text-md sm:text-base text-destructive">
+                {error}
+              </p>
+            )}
+          </div>
 
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de ticket</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={loading}
-                      className="space-y-2"
-                    >
-                      <ChoiceCard
-                        id="ticket-regular"
-                        value="REGULAR"
-                        title="Regular"
-                        description="Atención normal en orden de llegada"
-                        selected={field.value === "REGULAR"}
-                      />
-
-                      <ChoiceCard
-                        id="ticket-preferential"
-                        value="PREFERENTIAL"
-                        title="Preferencial"
-                        description="Atención prioritaria para casos especiales"
-                        selected={field.value === "PREFERENTIAL"}
-                      />
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <Button
+            type="submit"
+            size="lg"
+            className="
+              w-full
+              h-14 sm:h-16 md:h-20
+              rounded-xl sm:rounded-2xl
+              text-base sm:text-lg md:text-xl
+              transition hover:scale-[1.02]
+            "
+            disabled={loading}
+          >
+            Continuar
+            <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6" />
+          </Button>
+        </form>
+      ) : (
+        <div className="w-full max-w-full lg:max-w-7xl space-y-8 sm:space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 md:gap-10">
+            <ChoiceCard
+              title="Regular"
+              description="Atención normal por orden de llegada"
+              icon={<Ticket className="h-8 w-8 sm:h-10 sm:w-10" />}
+              onClick={() => handleTypeSelect("REGULAR")}
+              disabled={loading}
             />
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => form.reset(DEFAULT_VALUES)}
-                disabled={loading}
-              >
-                Limpiar
-              </Button>
 
-              <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generando
-                  </>
-                ) : (
-                  <>
-                    <Ticket className="mr-2 h-4 w-4" />
-                    Generar ticket
-                  </>
-                )}
-              </Button>
+            <ChoiceCard
+              title="Preferencial"
+              description="Atención prioritaria para casos especiales"
+              icon={<Star className="h-8 w-8 sm:h-10 sm:w-10" />}
+              onClick={() => handleTypeSelect("PREFERENCIAL")}
+              disabled={loading}
+            />
+          </div>
+
+          {loading && (
+            <div className="flex items-center justify-center gap-3 sm:gap-4 text-base sm:text-lg text-muted-foreground">
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
+              Generando ticket...
             </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  )
-}
+          )}
 
-interface ChoiceCardProps {
-  id: string
-  value: "REGULAR" | "PREFERENTIAL"
-  title: string
-  description: string
-  selected: boolean
-}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 sm:pt-6">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setStep("package")}
+              disabled={loading}
+              className="h-12 sm:h-14 rounded-xl text-base sm:text-lg"
+            >
+              <ArrowLeft className="mr-2 h-5 w-5" />
+              Volver
+            </Button>
 
-function ChoiceCard({
-  id,
-  value,
-  title,
-  description,
-  selected,
-}: ChoiceCardProps) {
-  return (
-    <FieldLabel htmlFor={id}>
-      <Field
-        orientation="horizontal"
-        className={`
-          cursor-pointer rounded-lg border p-3 transition
-          ${selected ? "border-primary bg-muted/50" : "hover:bg-muted/50"}
-        `}
-      >
-        <FieldContent>
-          <FieldTitle>{title}</FieldTitle>
-          <ChoiceDescription>{description}</ChoiceDescription>
-        </FieldContent>
-
-        <RadioGroupItem id={id} value={value} />
-      </Field>
-    </FieldLabel>
+            <span className="text-sm sm:text-base text-muted-foreground">
+              Seleccione una opción para continuar
+            </span>
+          </div>
+        </div>
+      )}
+    </main>
   )
 }

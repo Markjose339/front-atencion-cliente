@@ -31,9 +31,13 @@ export const UserSchema = z.object({
     .optional()
     .or(z.literal("")),
   isActive: z.boolean(),
+  serviceWindowId: z.string()
+    .min(1, "Debe seleccionar una ventanilla")
+    .max(25, "El ID de categoría no puede exceder 25 caracteres"),
   roleIds: z.array(z.string())
     .min(1, { message: "Debe de tener al menos un rol asignado" })
 })
+
 export const UserUpdateSchema = z.object({
   name: z.string()
     .min(5, {
@@ -74,6 +78,11 @@ export const UserUpdateSchema = z.object({
 
   isActive: z.boolean().optional(),
 
+  serviceWindowId: z.string()
+    .min(1, "Debe seleccionar una ventanilla")
+    .max(25, "El ID de categoría no puede exceder 25 caracteres")
+    .optional(),
+    
   roleIds: z.array(z.string())
     .min(1, { message: "Debe de tener al menos un rol asignado" })
     .optional(),

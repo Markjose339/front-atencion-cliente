@@ -62,7 +62,7 @@ export function PermissionDeleteDialog({ permission, open, onOpenChange }: Permi
           <AlertDialogAction
             onClick={handleDelete}
             disabled={remove.isPending}
-            className="bg-destructive hover:bg-destructive/90"
+            variant="destructive"
           >
             {remove.isPending ? "Eliminando..." : "Eliminar"}
           </AlertDialogAction>

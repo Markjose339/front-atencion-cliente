@@ -3,10 +3,10 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Permission } from "@/types/permission";
 import { ServiceWindowActions } from "./service-window-actions";
+import { ServiceWindow } from "@/types/service-window";
 
-export const serviceWindowColumns = (): ColumnDef<Permission>[] => [
+export const serviceWindowColumns = (): ColumnDef<ServiceWindow>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => {
@@ -16,6 +16,20 @@ export const serviceWindowColumns = (): ColumnDef<Permission>[] => [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Nombre
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    }
+  },
+  {
+    accessorKey: "code",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Codigo de ventanilla
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )

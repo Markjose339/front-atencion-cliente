@@ -36,6 +36,7 @@ export function ServiceWindowCreateDialog() {
     resolver: zodResolver(ServiceWindowsSchema),
     defaultValues: {
       name: "",
+      code: "",
     },
   });
 
@@ -83,6 +84,24 @@ export function ServiceWindowCreateDialog() {
                   <FormControl>
                     <Input
                       placeholder="Nombre de la ventanilla (ej: ventanilla 1)"
+                      {...field}
+                      disabled={create.isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Codigo de la ventanilla</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Codigo de la ventanilla (ej: DD)"
                       {...field}
                       disabled={create.isPending}
                     />

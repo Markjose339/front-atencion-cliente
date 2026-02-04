@@ -15,9 +15,9 @@ export function ServiceWindowsTable() {
   const page: number = Number(searchParams.get("page") || 1);
   const limit: number = Number(searchParams.get("limit") || 10);
   const search: string = searchParams.get("search") || "";
-  const { findAll } = useServiceWindowsQuery({ page, limit, search });
+  const { findAllServiceWindows } = useServiceWindowsQuery({ page, limit, search });
 
-  const { data: response, isLoading, error, refetch } = findAll;
+  const { data: response, isLoading, error, refetch } = findAllServiceWindows;
 
   const updateURL = useCallback(
     (newPage: number, newLimit: number, newSearch: string): void => {
