@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   Command,
   Frame,
-  Headset,
   Home, LifeBuoy,
   Map,
   MessageSquare,
@@ -28,6 +27,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { title } from "process"
+import { url } from "inspector"
 
 const data = {
   user: {
@@ -55,6 +56,11 @@ const data = {
       title: "Permisos",
       url: "/permissions",
       icon: Shield,
+    },
+    {
+      title: "Departamentes",
+      url: "/departments",
+      icon: Map,
     },
     {
       title: "Ventanillas",
