@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react"
+import { Check } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -49,6 +49,7 @@ export function PaginatedCommandSelect({
   const selected = items.find((i) => i.id === value)
 
   const [localSearch, setLocalSearch] = useState(search)
+  const [open, setOpen] = useState(false) // ✅ nuevo
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -64,16 +65,23 @@ export function PaginatedCommandSelect({
     setLocalSearch(search)
   }, [search])
 
+  // resetear página cuando cambia búsqueda
+  useEffect(() => {
+    onPageChange(1)
+  }, [search, onPageChange])
+
   const canGoToPrevious = page > 1
   const canGoToNext = page < totalPages
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
-          className="w-full justify-between"
+          className={`w-full justify-between font-normal ${
+            !selected ? "text-muted-foreground" : ""
+          }`}
         >
           {selected?.label ?? placeholder ?? "Seleccionar"}
         </Button>
@@ -96,7 +104,10 @@ export function PaginatedCommandSelect({
               <CommandItem
                 key={item.id}
                 value={item.label}
-                onSelect={() => onChange(item.id)}
+                onSelect={() => {
+                  onChange(item.id)
+                  setOpen(false) // ✅ cerrar al seleccionar
+                }}
               >
                 <Check
                   className={`mr-2 h-4 w-4 ${

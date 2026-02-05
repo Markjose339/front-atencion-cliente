@@ -6,7 +6,7 @@ import { UseQuery } from "@/types/use-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useDepartmentsQuery({ page, limit, search }: UseQuery) {
-  const findAll = useQuery({
+  const findAllDepartments = useQuery({
     queryKey: ["departments", page, limit, search],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -22,7 +22,7 @@ export function useDepartmentsQuery({ page, limit, search }: UseQuery) {
     staleTime: 30_000,
   });
 
-  return { findAll };
+  return { findAllDepartments };
 }
 
 export function useDepartmentsMutation() {

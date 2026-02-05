@@ -50,11 +50,9 @@ const ITEMS_PER_PAGE = 10
 export function UserCreateDialog() {
   const [open, setOpen] = useState(false)
 
-  // Estados independientes para roles
   const [rolesPage, setRolesPage] = useState(1)
   const [rolesSearch, setRolesSearch] = useState("")
 
-  // Estados independientes para ventanillas de servicio
   const [serviceWindowsPage, setServiceWindowsPage] = useState(1)
   const [serviceWindowsSearch, setServiceWindowsSearch] = useState("")
 

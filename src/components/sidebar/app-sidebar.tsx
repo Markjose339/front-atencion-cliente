@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  Building,
   Command,
   Frame,
   Home, LifeBuoy,
@@ -27,8 +28,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { title } from "process"
-import { url } from "inspector"
 
 const data = {
   user: {
@@ -61,6 +60,11 @@ const data = {
       title: "Departamentes",
       url: "/departments",
       icon: Map,
+    },
+    {
+      title: "Sucursales",
+      url: "/branches",
+      icon: Building ,
     },
     {
       title: "Ventanillas",
