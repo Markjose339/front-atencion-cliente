@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import {
   Loader2,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 
 import { useTicketsMutation } from "@/hooks/use-tickets"
+import { useQZPrinter } from "@/hooks/use-qz-printer"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { FullscreenButton } from "../ui/fullscreen-button"
@@ -27,6 +28,26 @@ export function TicketCreate() {
   const [error, setError] = useState("")
 
   const { create } = useTicketsMutation()
+  const { isConnected, isChecking, printTicket } = useQZPrinter()
+  useEffect(() => {
+    if (isChecking) {
+      toast.loading("Verificando impresora...", {
+        id: "printer-status",
+      })
+      return
+    }
+
+    if (isConnected) {
+      toast.success("Impresora conectada y lista", {
+        id: "printer-status",
+      })
+    } else {
+      toast.error("Impresora no conectada", {
+        id: "printer-status",
+        description: "Verifica que QZ Tray esté ejecutándose",
+      })
+    }
+  }, [isChecking, isConnected])
 
   const resetForm = () => {
     setStep("package")
@@ -37,41 +58,63 @@ export function TicketCreate() {
 
   const handlePackageSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!packageCode.trim()) {
       setError("El código de paquete es requerido")
       return
     }
+
     setError("")
     setStep("type")
   }
 
   const handleTypeSelect = async (type: TicketType) => {
+    if (!isConnected) {
+      toast.error("La impresora no está conectada", {
+        description: "No se puede imprimir el ticket",
+      })
+      return
+    }
+
     setLoading(true)
 
-    toast.promise(create.mutateAsync({
-      packageCode: packageCode.trim(),
-      type,
-    }), {
-      success: (data) => {
-        resetForm()
-        return `Ticket "${data.code}" creado exitosamente`
-      },
-      error: (error: Error) => {
-        resetForm()
-        return error.message
+    try {
+      const ticket = await create.mutateAsync({
+        packageCode: packageCode.trim(),
+        type,
+      })
+
+      const printed = await printTicket(ticket)
+
+      if (printed) {
+        toast.success(`Ticket "${ticket.code}" creado e impreso`)
+      } else {
+        toast.warning(`Ticket "${ticket.code}" creado`, {
+          description: "No se pudo imprimir",
+        })
       }
-    })
+
+      resetForm()
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Error al crear el ticket"
+      toast.error(message)
+      setLoading(false)
+    }
   }
 
   return (
     <main className="relative flex min-h-screen w-full flex-col items-center justify-center bg-linear-to-b from-background to-muted/30 px-4 sm:px-6 md:px-10 py-8 sm:py-10 md:py-14">
       <FullscreenButton />
+
       <div className="mb-6 sm:mb-8 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-primary/10 shadow-sm">
         <Ticket className="h-8 w-8 sm:h-11 sm:w-11 text-primary" />
       </div>
+
       <h1 className="mb-2 text-center font-extrabold tracking-tight text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
         Generar Ticket
       </h1>
+
       <p className="mb-8 sm:mb-10 md:mb-14 max-w-xl sm:max-w-2xl text-center text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground">
         {step === "package"
           ? "Ingrese el código del paquete"
@@ -109,7 +152,7 @@ export function TicketCreate() {
             />
 
             {error && (
-              <p className="text-md sm:text-base text-destructive">
+              <p className="text-md sm:text-base text-destructive text-center">
                 {error}
               </p>
             )}
@@ -118,13 +161,7 @@ export function TicketCreate() {
           <Button
             type="submit"
             size="lg"
-            className="
-              w-full
-              h-14 sm:h-16 md:h-20
-              rounded-xl sm:rounded-2xl
-              text-base sm:text-lg md:text-xl
-              transition hover:scale-[1.02]
-            "
+            className="w-full h-14 sm:h-16 md:h-20 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl transition hover:scale-[1.02]"
             disabled={loading}
           >
             Continuar
@@ -139,7 +176,7 @@ export function TicketCreate() {
               description="Atención normal por orden de llegada"
               icon={<Ticket className="h-8 w-8 sm:h-10 sm:w-10" />}
               onClick={() => handleTypeSelect("REGULAR")}
-              disabled={loading}
+              disabled={loading || !isConnected}
             />
 
             <ChoiceCard
@@ -147,14 +184,14 @@ export function TicketCreate() {
               description="Atención prioritaria para casos especiales"
               icon={<Star className="h-8 w-8 sm:h-10 sm:w-10" />}
               onClick={() => handleTypeSelect("PREFERENCIAL")}
-              disabled={loading}
+              disabled={loading || !isConnected}
             />
           </div>
 
           {loading && (
             <div className="flex items-center justify-center gap-3 sm:gap-4 text-base sm:text-lg text-muted-foreground">
               <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
-              Generando ticket...
+              Generando e imprimiendo ticket...
             </div>
           )}
 
