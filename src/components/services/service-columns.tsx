@@ -20,6 +20,18 @@ export const serviceColumns = (): ColumnDef<Service>[] => [
     ),
   },
   {
+    accessorKey: "abbreviation",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Abreviatura
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+  },
+  {
     accessorKey: "code",
     header: ({ column }) => (
       <Button

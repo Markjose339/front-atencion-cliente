@@ -67,6 +67,11 @@ const data = {
       icon: Frame,
     },
     {
+      title: "Asignaciones",
+      url: "/assignments",
+      icon: Map,
+    },
+    {
       title: "Atencion al Cliente",
       url: "/customer-service",
       icon: MessageSquare,

@@ -38,7 +38,11 @@ export function ServiceCreateDialog() {
 
   const form = useForm<ServiceSchemaType>({
     resolver: zodResolver(ServiceSchema),
-    defaultValues: { name: "", code: "" },
+    defaultValues: {
+      name: "",
+      abbreviation: "",
+      code: "",
+    },
   });
 
   async function onSubmit(values: ServiceSchemaType) {
@@ -87,6 +91,28 @@ export function ServiceCreateDialog() {
                     <Input
                       placeholder="Nombre del servicio"
                       {...field}
+                      disabled={create.isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="abbreviation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Abreviatura</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Abreviatura (ej: EMS)"
+                      value={field.value}
+                      onChange={(e) => {
+                        const v = e.target.value.toUpperCase().replace(/\s+/g, "");
+                        field.onChange(v);
+                      }}
                       disabled={create.isPending}
                     />
                   </FormControl>

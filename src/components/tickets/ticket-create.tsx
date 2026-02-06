@@ -16,7 +16,7 @@ import { useQZPrinter } from "@/hooks/use-qz-printer"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { FullscreenButton } from "../ui/fullscreen-button"
-import { ChoiceCard } from "./choice-card"
+import { ChoiceCard } from "../tickets/choice-card"
 
 type TicketType = "REGULAR" | "PREFERENCIAL"
 type Step = "package" | "type"

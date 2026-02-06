@@ -45,6 +45,7 @@ export default function ServiceEditDialog({
     resolver: zodResolver(ServiceSchema),
     defaultValues: {
       name: service.name,
+      abbreviation: service.abbreviation,
       code: service.code,
     },
   });
@@ -53,6 +54,7 @@ export default function ServiceEditDialog({
     if (open && service) {
       form.reset({
         name: service.name,
+        abbreviation: service.abbreviation,
         code: service.code,
       });
     }
@@ -89,6 +91,27 @@ export default function ServiceEditDialog({
                   <FormLabel>Nombre</FormLabel>
                   <FormControl>
                     <Input {...field} disabled={update.isPending} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="abbreviation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Abreviatura</FormLabel>
+                  <FormControl>
+                    <Input
+                      value={field.value}
+                      onChange={(e) => {
+                        const v = e.target.value.toUpperCase().replace(/\s+/g, "");
+                        field.onChange(v);
+                      }}
+                      disabled={update.isPending}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
