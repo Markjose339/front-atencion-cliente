@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -26,27 +26,25 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useBranchesMutation } from "@/hooks/use-branches";
-import { PaginatedCommandSelect } from "@/components/ui/paginated-command-select";
-import { PaginatedItem } from "@/components/ui/paginated-checkbox-list";
-import { useDepartmentsQuery } from "@/hooks/use-departments";
-import { BranchSchema, BranchSchemaType } from "@/lib/schemas/branch.schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BOLIVIA_DEPARTMENTS, BranchSchema, BranchSchemaType } from "@/lib/schemas/branch.schema";
 
 export function BranchCreateDialog() {
   const [open, setOpen] = useState(false);
-  const [page, setPage] = useState<number>(1)
-  const [search, setSearch] = useState<string>("")
-
-  const limit = 10
-
   const { create } = useBranchesMutation();
-  const { findAllDepartments } = useDepartmentsQuery({ page, limit, search })
 
   const form = useForm<BranchSchemaType>({
     resolver: zodResolver(BranchSchema),
     defaultValues: {
       name: "",
       address: "",
-      departmentId: ""
+      departmentName: "",
     },
   });
 
@@ -62,22 +60,10 @@ export function BranchCreateDialog() {
     });
   }
 
-  const departments = useMemo<PaginatedItem[]>(() => {
-    return findAllDepartments.data?.data.map((role) => ({
-      id: role.id,
-      label: role.name,
-    })) ?? []
-  }, [findAllDepartments.data])
-
   const handleOpenChange = (value: boolean) => {
     setOpen(value);
     if (!value) form.reset();
   };
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value)
-    setPage(1)
-  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -105,7 +91,11 @@ export function BranchCreateDialog() {
                 <FormItem>
                   <FormLabel>Nombre</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nombre de la sucursal" {...field} disabled={create.isPending} />
+                    <Input
+                      placeholder="Nombre de la sucursal"
+                      {...field}
+                      disabled={create.isPending}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -117,9 +107,7 @@ export function BranchCreateDialog() {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Dirección
-                  </FormLabel>
+                  <FormLabel>Dirección</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -134,23 +122,27 @@ export function BranchCreateDialog() {
 
             <FormField
               control={form.control}
-              name="departmentId"
+              name="departmentName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Departamento</FormLabel>
                   <FormControl>
-                    <PaginatedCommandSelect
-                      items={departments}
+                    <Select
                       value={field.value}
-                      search={search}
-                      page={page}
-                      totalPages={findAllDepartments.data?.meta.totalPages ?? 1}
-                      isLoading={findAllDepartments.isLoading}
-                      onChange={field.onChange}
-                      onSearchChange={handleSearchChange}
-                      onPageChange={setPage}
-                      placeholder="Seleccione una departamento..."
-                    />
+                      onValueChange={field.onChange}
+                      disabled={create.isPending}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccione un departamento..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BOLIVIA_DEPARTMENTS.map((dep) => (
+                          <SelectItem key={dep} value={dep}>
+                            {dep}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -159,7 +151,12 @@ export function BranchCreateDialog() {
 
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={() => form.reset()} disabled={create.isPending}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => form.reset()}
+                  disabled={create.isPending}
+                >
                   Cancelar
                 </Button>
               </DialogClose>

@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useEffect, useMemo, useState } from "react";
 import {
   Form,
   FormControl,
@@ -23,11 +22,20 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Branch } from "@/types/branch";
-import { BranchSchema, BranchSchemaType } from "@/lib/schemas/branch.schema";
+import {
+  BranchSchema,
+  type BranchSchemaType,
+  BOLIVIA_DEPARTMENTS,
+} from "@/lib/schemas/branch.schema";
 import { useBranchesMutation } from "@/hooks/use-branches";
-import { PaginatedCommandSelect } from "@/components/ui/paginated-command-select";
-import { useDepartmentsQuery } from "@/hooks/use-departments";
-import { PaginatedItem } from "../ui/paginated-checkbox-list";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useEffect } from "react";
 
 interface BranchEditDialogProps {
   branch: Branch;
@@ -35,20 +43,19 @@ interface BranchEditDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ITEMS_PER_PAGE = 10
-
-export default function BranchEditDialog({ branch, open, onOpenChange }: BranchEditDialogProps) {
-  const [page, setPage] = useState<number>(1)
-  const [search, setSearch] = useState<string>("")
+export default function BranchEditDialog({
+  branch,
+  open,
+  onOpenChange,
+}: BranchEditDialogProps) {
   const { update } = useBranchesMutation();
-  const { findAllDepartments } = useDepartmentsQuery({ page, limit: ITEMS_PER_PAGE, search })
 
   const form = useForm<BranchSchemaType>({
     resolver: zodResolver(BranchSchema),
     defaultValues: {
       name: branch.name,
       address: branch.address,
-      departmentId: branch.department.id,
+      departmentName: branch.departmentName ?? "", 
     },
   });
 
@@ -57,7 +64,7 @@ export default function BranchEditDialog({ branch, open, onOpenChange }: BranchE
       form.reset({
         name: branch.name,
         address: branch.address,
-        departmentId: branch.department.id,
+        departmentName: branch.departmentName ?? "",
       });
     }
   }, [open, branch, form]);
@@ -73,30 +80,18 @@ export default function BranchEditDialog({ branch, open, onOpenChange }: BranchE
     });
   }
 
-  const departments = useMemo<PaginatedItem[]>(() => {
-    return findAllDepartments.data?.data.map((role) => ({
-      id: role.id,
-      label: role.name,
-    })) ?? []
-  }, [findAllDepartments.data])
-
   const handleDialogClose = () => {
-    onOpenChange(false)
-    setPage(1)
-    setSearch("")
-  }
-  const handleSearchChange = (value: string) => {
-    setSearch(value)
-    setPage(1)
-  }
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(value) => {
-      if (!value) {
-        handleDialogClose()
-      } else {
-        onOpenChange(value)
-      }
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) handleDialogClose();
+        else onOpenChange(value);
+      }}
+    >
       <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Editar Sucursal</DialogTitle>
@@ -126,9 +121,7 @@ export default function BranchEditDialog({ branch, open, onOpenChange }: BranchE
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Dirección
-                  </FormLabel>
+                  <FormLabel>Dirección</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -143,23 +136,28 @@ export default function BranchEditDialog({ branch, open, onOpenChange }: BranchE
 
             <FormField
               control={form.control}
-              name="departmentId"
+              name="departmentName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Departamento</FormLabel>
                   <FormControl>
-                    <PaginatedCommandSelect
-                      items={departments}
-                      value={field.value}
-                      search={search}
-                      page={page}
-                      totalPages={findAllDepartments.data?.meta.totalPages ?? 1}
-                      isLoading={findAllDepartments.isLoading}
-                      onChange={field.onChange}
-                      onSearchChange={handleSearchChange}
-                      onPageChange={setPage}
-                      placeholder="Seleccione un departamento..."
-                    />
+                    <Select
+                      value={field.value ?? ""} 
+                      onValueChange={field.onChange}
+                      disabled={update.isPending}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccione un departamento..." />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        {BOLIVIA_DEPARTMENTS.map((dep) => (
+                          <SelectItem key={dep} value={dep}>
+                            {dep}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -167,9 +165,15 @@ export default function BranchEditDialog({ branch, open, onOpenChange }: BranchE
             />
 
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => onOpenChange(false)} disabled={update.isPending}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => onOpenChange(false)}
+                disabled={update.isPending}
+              >
                 Cancelar
               </Button>
+
               <Button type="submit" disabled={update.isPending}>
                 {update.isPending ? "Guardando..." : "Actualizar Sucursal"}
               </Button>

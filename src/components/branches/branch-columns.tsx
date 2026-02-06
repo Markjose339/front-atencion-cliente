@@ -7,9 +7,6 @@ import { Branch } from "@/types/branch";
 import { BranchActions } from "@/components/branches/branch-actions";
 
 export const branchColumns = (): ColumnDef<Branch>[] => [
-  // =========================
-  // Nombre
-  // =========================
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -23,9 +20,6 @@ export const branchColumns = (): ColumnDef<Branch>[] => [
     ),
   },
 
-  // =========================
-  // Dirección
-  // =========================
   {
     accessorKey: "address",
     header: "Dirección",
@@ -36,27 +30,21 @@ export const branchColumns = (): ColumnDef<Branch>[] => [
     ),
   },
 
-  // =========================
-  // Departamento (relación)
-  // =========================
   {
-    id: "department",
+    id: "departmentName",
     header: "Departamento",
     cell: ({ row }) => {
-      const dept = row.original.department;
+
 
       return (
         <div className="flex flex-col">
-          <span className="font-medium">{dept.name}</span>
-          <span className="text-xs text-muted-foreground">{dept.code}</span>
+          <span className="font-medium">{row.original.departmentName}</span>
         </div>
       );
     },
   },
 
-  // =========================
-  // Fecha de creación
-  // =========================
+
   {
     accessorKey: "createdAt",
     header: ({ column }) => (

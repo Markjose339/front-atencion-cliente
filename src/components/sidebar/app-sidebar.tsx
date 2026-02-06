@@ -52,11 +52,6 @@ const data = {
       icon: Shield,
     },
     {
-      title: "Departamentes",
-      url: "/departments",
-      icon: Map,
-    },
-    {
       title: "Sucursales",
       url: "/branches",
       icon: Building ,
