@@ -30,11 +30,6 @@ import {
 } from "@/components/ui/sidebar"
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -70,6 +65,11 @@ const data = {
       title: "Ventanillas",
       url: "/service-windows",
       icon: Ticket,
+    },
+    {
+      title: "Servicios",
+      url: "/services",
+      icon: Frame,
     },
     {
       title: "Atencion al Cliente",
