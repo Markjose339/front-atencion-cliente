@@ -6,7 +6,7 @@ import { UseQuery } from "@/types/use-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useRolesQuery({ page, limit, search }: UseQuery) {
-  const findAll = useQuery({
+  const findAllRoles = useQuery({
     queryKey: ["roles", page, limit, search],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -19,7 +19,7 @@ export function useRolesQuery({ page, limit, search }: UseQuery) {
     staleTime: 30_000,
   })
 
-  return { findAll }
+  return { findAllRoles }
 }
 
 export function useRolesMutation() {

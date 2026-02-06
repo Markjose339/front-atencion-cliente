@@ -7,7 +7,6 @@ import { toast } from "sonner"
 
 import { useRolesQuery } from "@/hooks/use-roles"
 import { useUsersMutation } from "@/hooks/use-users"
-import { useServiceWindowsQuery } from "@/hooks/use-service-windows"
 
 import { User } from "@/types/user"
 import { UserUpdateSchema, UserUpdateSchemaType } from "@/lib/schemas/user.schema"
@@ -42,7 +41,6 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/passwrod-input"
-import { PaginatedCommandSelect } from "@/components/ui/paginated-command-select"
 
 const ITEMS_PER_PAGE = 10
 
@@ -56,21 +54,12 @@ export function UserEditDialog({ user, open, onOpenChange }: UserEditDialogProps
   const [rolesPage, setRolesPage] = useState(1)
   const [rolesSearch, setRolesSearch] = useState("")
 
-  const [serviceWindowsPage, setServiceWindowsPage] = useState(1)
-  const [serviceWindowsSearch, setServiceWindowsSearch] = useState("")
-
   const { update } = useUsersMutation()
 
-  const { findAll: findAllRoles } = useRolesQuery({
+  const { findAllRoles } = useRolesQuery({
     page: rolesPage,
     limit: ITEMS_PER_PAGE,
     search: rolesSearch,
-  })
-
-  const { findAllServiceWindows } = useServiceWindowsQuery({
-    page: serviceWindowsPage,
-    limit: ITEMS_PER_PAGE,
-    search: serviceWindowsSearch,
   })
 
   const form = useForm<UserUpdateSchemaType>({
@@ -83,7 +72,6 @@ export function UserEditDialog({ user, open, onOpenChange }: UserEditDialogProps
       phone: user.phone || "",
       isActive: user.isActive,
       roleIds: user.roles.map((r) => r.id),
-      serviceWindowId: user.serviceWindow.id || undefined,
     },
   })
 
@@ -97,7 +85,6 @@ export function UserEditDialog({ user, open, onOpenChange }: UserEditDialogProps
         phone: user.phone || "",
         isActive: user.isActive,
         roleIds: user.roles.map((r) => r.id),
-        serviceWindowId: user.serviceWindow.id || undefined,
       })
     }
   }, [open, user, form])
@@ -122,31 +109,15 @@ export function UserEditDialog({ user, open, onOpenChange }: UserEditDialogProps
     )
   }, [findAllRoles.data])
 
-  const serviceWindows = useMemo<PaginatedItem[]>(() => {
-    return (
-      findAllServiceWindows.data?.data.map((window) => ({
-        id: window.id,
-        label: window.name,
-      })) ?? []
-    )
-  }, [findAllServiceWindows.data])
-
   const handleRolesSearchChange = (value: string) => {
     setRolesSearch(value)
     setRolesPage(1)
-  }
-
-  const handleServiceWindowsSearchChange = (value: string) => {
-    setServiceWindowsSearch(value)
-    setServiceWindowsPage(1)
   }
 
   const handleDialogClose = () => {
     onOpenChange(false)
     setRolesPage(1)
     setRolesSearch("")
-    setServiceWindowsPage(1)
-    setServiceWindowsSearch("")
   }
 
   return (
@@ -286,31 +257,6 @@ export function UserEditDialog({ user, open, onOpenChange }: UserEditDialogProps
               <h3 className="text-sm font-semibold text-foreground">
                 Asignación
               </h3>
-
-              <FormField
-                control={form.control}
-                name="serviceWindowId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ventanilla de servicio</FormLabel>
-                    <FormControl>
-                      <PaginatedCommandSelect
-                        items={serviceWindows}
-                        value={field.value}
-                        search={serviceWindowsSearch}
-                        page={serviceWindowsPage}
-                        totalPages={findAllServiceWindows.data?.meta.totalPages ?? 1}
-                        isLoading={findAllServiceWindows.isLoading}
-                        onChange={field.onChange}
-                        onSearchChange={handleServiceWindowsSearchChange}
-                        onPageChange={setServiceWindowsPage}
-                        placeholder="Seleccione una ventanilla..."
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}

@@ -15,9 +15,9 @@ export function PermissionsTable() {
   const page: number = Number(searchParams.get("page") || 1);
   const limit: number = Number(searchParams.get("limit") || 10);
   const search: string = searchParams.get("search") || "";
-  const { findAll } = usePermissionsQuery({ page, limit, search });
+  const { findAllPermissions } = usePermissionsQuery({ page, limit, search });
 
-  const { data: response, isLoading, error, refetch } = findAll;
+  const { data: response, isLoading, error, refetch } = findAllPermissions;
 
   const updateURL = useCallback(
     (newPage: number, newLimit: number, newSearch: string): void => {

@@ -16,8 +16,8 @@ export function ServicesTable() {
   const limit: number = Number(searchParams.get("limit") || 10);
   const search: string = searchParams.get("search") || "";
 
-  const { findAll } = useServicesQuery({ page, limit, search });
-  const { data: response, isLoading, error, refetch } = findAll;
+  const { findAllServices } = useServicesQuery({ page, limit, search });
+  const { data: response, isLoading, error, refetch } = findAllServices;
 
   const updateURL = useCallback(
     (newPage: number, newLimit: number, newSearch: string): void => {

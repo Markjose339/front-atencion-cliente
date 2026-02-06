@@ -43,7 +43,7 @@ export function RoleEditDialog({ role, open, onOpenChange }: RoleEditDialogProps
 
   const limit = 10
 
-  const { findAll } = usePermissionsQuery({ page, limit, search })
+  const { findAllPermissions } = usePermissionsQuery({ page, limit, search })
   const { update } = useRolesMutation()
 
   const form = useForm<z.infer<typeof RoleSchema>>({
@@ -74,14 +74,14 @@ export function RoleEditDialog({ role, open, onOpenChange }: RoleEditDialogProps
     });
   }
 
-  const totalPages: number = findAll.data?.meta.totalPages ?? 1
+  const totalPages: number = findAllPermissions.data?.meta.totalPages ?? 1
 
   const permissions = useMemo<PaginatedItem[]>(() => {
-    return findAll.data?.data.map(p => ({
+    return findAllPermissions.data?.data.map(p => ({
       id: p.id,
       label: p.name
     })) ?? []
-  }, [findAll.data])
+  }, [findAllPermissions.data])
 
 
   return (
@@ -128,7 +128,7 @@ export function RoleEditDialog({ role, open, onOpenChange }: RoleEditDialogProps
                     page={page}
                     totalPages={totalPages}
                     search={search}
-                    isLoading={findAll.isLoading}
+                    isLoading={findAllPermissions.isLoading}
                     onSearchChange={(value) => {
                       setSearch(value)
                       setPage(1)

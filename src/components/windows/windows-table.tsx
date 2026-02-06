@@ -1,23 +1,23 @@
 "use client";
 
 import { DataTable } from "@/components/table/data-table";
+import { windowColumns } from "@/components/windows/window-columns";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { useServiceWindowsQuery } from "@/hooks/use-service-windows";
-import { serviceWindowColumns } from "./service-window-columns";
+import { useWindowsQuery } from "@/hooks/use-windows";
 
-export function ServiceWindowsTable() {
+export function WindowsTable() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const page: number = Number(searchParams.get("page") || 1);
   const limit: number = Number(searchParams.get("limit") || 10);
   const search: string = searchParams.get("search") || "";
-  const { findAllServiceWindows } = useServiceWindowsQuery({ page, limit, search });
 
-  const { data: response, isLoading, error, refetch } = findAllServiceWindows;
+  const { findAllWindows } = useWindowsQuery({ page, limit, search });
+  const { data: response, isLoading, error, refetch } = findAllWindows;
 
   const updateURL = useCallback(
     (newPage: number, newLimit: number, newSearch: string): void => {
@@ -60,7 +60,7 @@ export function ServiceWindowsTable() {
 
   return (
     <DataTable
-      columns={serviceWindowColumns()}
+      columns={windowColumns()}
       data={response?.data ?? []}
       loading={isLoading}
       pageCount={response?.meta?.totalPages ?? 0}
@@ -69,7 +69,7 @@ export function ServiceWindowsTable() {
       onPaginationChange={handlePaginationChange}
       onSearchChange={handleSearchChange}
       searchValue={search}
-      searchPlaceholder="Buscar ventanilla..."
+      searchPlaceholder="Buscar ventanas..."
       totalItems={response?.meta?.total ?? 0}
     />
   );

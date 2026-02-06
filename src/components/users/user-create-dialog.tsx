@@ -8,7 +8,6 @@ import { PlusCircle } from "lucide-react"
 
 import { useRolesQuery } from "@/hooks/use-roles"
 import { useUsersMutation } from "@/hooks/use-users"
-import { useServiceWindowsQuery } from "@/hooks/use-service-windows"
 
 import { UserCreateSchemaType, UserSchema } from "@/lib/schemas/user.schema"
 
@@ -58,16 +57,10 @@ export function UserCreateDialog() {
 
   const { create } = useUsersMutation()
   
-  const { findAll: findAllRoles } = useRolesQuery({ 
+  const { findAllRoles } = useRolesQuery({ 
     page: rolesPage, 
     limit: ITEMS_PER_PAGE, 
     search: rolesSearch 
-  })
-
-  const { findAllServiceWindows } = useServiceWindowsQuery({ 
-    page: serviceWindowsPage, 
-    limit: ITEMS_PER_PAGE, 
-    search: serviceWindowsSearch 
   })
 
   const form = useForm<UserCreateSchemaType>({
@@ -101,13 +94,6 @@ export function UserCreateDialog() {
       label: role.name,
     })) ?? []
   }, [findAllRoles.data])
-
-  const serviceWindows = useMemo<PaginatedItem[]>(() => {
-    return findAllServiceWindows.data?.data.map((window) => ({
-      id: window.id,
-      label: window.name,
-    })) ?? []
-  }, [findAllServiceWindows.data])
 
   const handleOpenChange = (value: boolean) => {
     setOpen(value)
@@ -251,32 +237,7 @@ export function UserCreateDialog() {
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="serviceWindowId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ventanilla de servicio</FormLabel>
-                  <FormControl>
-                    <PaginatedCommandSelect
-                      items={serviceWindows}
-                      value={field.value}
-                      search={serviceWindowsSearch}
-                      page={serviceWindowsPage}
-                      totalPages={findAllServiceWindows.data?.meta.totalPages ?? 1}
-                      isLoading={findAllServiceWindows.isLoading}
-                      onChange={field.onChange}
-                      onSearchChange={handleServiceWindowsSearchChange}
-                      onPageChange={setServiceWindowsPage}
-                      placeholder="Seleccione una ventanilla..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+            
             <FormField
               control={form.control}
               name="roleIds"

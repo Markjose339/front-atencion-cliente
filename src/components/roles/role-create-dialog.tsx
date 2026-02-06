@@ -42,7 +42,7 @@ export function RoleCreateDialog() {
   const limit = 10
 
   const { create } = useRolesMutation()
-  const { findAll } = usePermissionsQuery({ page, limit, search })
+  const { findAllPermissions } = usePermissionsQuery({ page, limit, search })
 
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(RoleSchema),
@@ -64,14 +64,14 @@ export function RoleCreateDialog() {
     })
   }
 
-  const totalPages: number = findAll.data?.meta.totalPages ?? 1
+  const totalPages: number = findAllPermissions.data?.meta.totalPages ?? 1
 
   const permissions = useMemo<PaginatedItem[]>(() => {
-    return findAll.data?.data.map((p) => ({
+    return findAllPermissions.data?.data.map((p) => ({
       id: p.id,
       label: p.name,
     })) ?? []
-  }, [findAll.data])
+  }, [findAllPermissions.data])
 
   const handleOnOpenChange = (value: boolean) => {
     setOpen(value)
@@ -127,7 +127,7 @@ export function RoleCreateDialog() {
                     page={page}
                     totalPages={totalPages}
                     search={search}
-                    isLoading={findAll.isLoading}
+                    isLoading={findAllPermissions.isLoading}
                     onSearchChange={(value) => {
                       setSearch(value)
                       setPage(1)

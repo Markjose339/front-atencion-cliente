@@ -1,11 +1,7 @@
-"use client"
+"use client";
 
 import { useState } from "react";
-import {
-  MoreHorizontal,
-  Pencil,
-  Trash2
-} from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,15 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ServiceWindowDeleteDialog } from "./service-window-delete-dialog";
-import { ServiceWindow } from "@/types/service-window";
-import ServiceWindowEditDialog from "./service-window-edit-dialog";
+import { Window } from "@/types/window";
+import WindowEditDialog from "@/components/windows/window-edit-dialog";
+import { WindowDeleteDialog } from "@/components/windows/window-delete-dialog";
 
-interface PermissionActionsProps {
-  serviceWindow: ServiceWindow;
+interface WindowActionsProps {
+  window: Window;
 }
 
-export function ServiceWindowActions({ serviceWindow }: PermissionActionsProps) {
+export function WindowActions({ window }: WindowActionsProps) {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
@@ -36,20 +32,22 @@ export function ServiceWindowActions({ serviceWindow }: PermissionActionsProps) 
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
+
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => navigator.clipboard.writeText(serviceWindow.id)}
-          >
-            Copiar ID de la ventanilla
+
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(window.id)}>
+            Copiar ID
           </DropdownMenuItem>
+
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Ver detalles</DropdownMenuItem>
+
           <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             <span>Editar</span>
           </DropdownMenuItem>
-          <DropdownMenuItem 
+
+          <DropdownMenuItem
             className="flex items-center text-destructive focus:text-destructive cursor-pointer"
             onClick={() => setOpenDeleteDialog(true)}
           >
@@ -58,16 +56,9 @@ export function ServiceWindowActions({ serviceWindow }: PermissionActionsProps) 
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ServiceWindowEditDialog
-        serviceWindow={serviceWindow}
-        open={openEditDialog}
-        onOpenChange={setOpenEditDialog}
-      />
-      <ServiceWindowDeleteDialog
-        serviceWindow={serviceWindow}
-        open={openDeleteDialog}
-        onOpenChange={setOpenDeleteDialog}
-      />
+
+      <WindowEditDialog window={window} open={openEditDialog} onOpenChange={setOpenEditDialog} />
+      <WindowDeleteDialog window={window} open={openDeleteDialog} onOpenChange={setOpenDeleteDialog} />
     </div>
   );
 }

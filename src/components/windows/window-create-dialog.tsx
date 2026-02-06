@@ -1,9 +1,14 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { PlusCircle } from "lucide-react";
+
+import { WindowSchema, WindowSchemaType } from "@/lib/schemas/window.schema";
+import { useWindowsMutation } from "@/hooks/use-windows";
+
 import {
   Dialog,
   DialogClose,
@@ -14,8 +19,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
 import {
   Form,
   FormControl,
@@ -24,31 +31,25 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useServiceWindowsMutation } from "@/hooks/use-service-windows";
-import { ServiceWindowsSchema, ServiceWindowsSchemaType } from "@/lib/schemas/service-windows.schema";
 
-export function ServiceWindowCreateDialog() {
+export function WindowCreateDialog() {
   const [open, setOpen] = useState(false);
-  const { create } = useServiceWindowsMutation();
+  const { create } = useWindowsMutation();
 
-  const form = useForm<ServiceWindowsSchemaType>({
-    resolver: zodResolver(ServiceWindowsSchema),
-    defaultValues: {
-      name: "",
-      code: "",
-    },
+  const form = useForm<WindowSchemaType>({
+    resolver: zodResolver(WindowSchema),
+    defaultValues: { name: "" },
   });
 
-  async function onSubmit(values: ServiceWindowsSchemaType) {
+  async function onSubmit(values: WindowSchemaType) {
     toast.promise(create.mutateAsync(values), {
-      loading: "Creando servicio...",
+      loading: "Creando ventana...",
       success: (data) => {
-        setOpen(false)
+        setOpen(false);
         form.reset();
-        return `servicio "${data.name}" creado exitosamente`
+        return `Ventana "${data.name}" creada exitosamente`;
       },
-      error: (error) => error.message
+      error: (error) => error.message,
     });
   }
 
@@ -62,14 +63,15 @@ export function ServiceWindowCreateDialog() {
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Nueva Ventanilla
+          Nueva Ventana
         </Button>
       </DialogTrigger>
+
       <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
-          <DialogTitle>Crear Nuevo Ventanilla</DialogTitle>
+          <DialogTitle>Crear Nueva Ventana</DialogTitle>
           <DialogDescription>
-            Complete el formulario para crear una nueva ventanilla en el sistema.
+            Complete el formulario para crear una nueva ventana.
           </DialogDescription>
         </DialogHeader>
 
@@ -80,28 +82,10 @@ export function ServiceWindowCreateDialog() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre de la ventanilla</FormLabel>
+                  <FormLabel>Nombre</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Nombre de la ventanilla (ej: ventanilla 1)"
-                      {...field}
-                      disabled={create.isPending}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Codigo de la ventanilla</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Codigo de la ventanilla (ej: DD)"
+                      placeholder="Nombre de la ventana"
                       {...field}
                       disabled={create.isPending}
                     />
@@ -124,7 +108,7 @@ export function ServiceWindowCreateDialog() {
               </DialogClose>
 
               <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Guardando..." : "Guardar Ventanilla"}
+                {create.isPending ? "Guardando..." : "Guardar Ventana"}
               </Button>
             </DialogFooter>
           </form>

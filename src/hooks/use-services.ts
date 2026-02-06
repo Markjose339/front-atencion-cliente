@@ -6,7 +6,7 @@ import { ServiceSchemaType } from "@/lib/schemas/service.schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useServicesQuery({ page, limit, search }: UseQuery) {
-  const findAll = useQuery({
+  const findAllServices = useQuery({
     queryKey: ["services", page, limit, search],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -20,7 +20,7 @@ export function useServicesQuery({ page, limit, search }: UseQuery) {
     staleTime: 30_000,
   });
 
-  return { findAll };
+  return { findAllServices };
 }
 
 export function useServicesMutation() {

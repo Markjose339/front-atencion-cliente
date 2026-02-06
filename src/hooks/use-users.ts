@@ -6,7 +6,7 @@ import { User } from "@/types/user";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useUsersQuery({ page, limit, search }: UseQuery) {
-  const findAll = useQuery({
+  const findAllUsers = useQuery({
     queryKey: ["users", page, limit, search],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -19,7 +19,7 @@ export function useUsersQuery({ page, limit, search }: UseQuery) {
     staleTime: 30_000,
   })
 
-  return { findAll }
+  return { findAllUsers }
 }
 
 export function useUsersMutation() {

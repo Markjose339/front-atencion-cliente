@@ -15,9 +15,9 @@ export function UsersTable() {
   const page: number = Number(searchParams.get("page") || 1);
   const limit: number = Number(searchParams.get("limit") || 10);
   const search: string = searchParams.get("search") || "";
-  const { findAll } = useUsersQuery({ page, limit, search });
+  const { findAllUsers } = useUsersQuery({ page, limit, search });
 
-  const { data: response, isLoading, error, refetch } = findAll
+  const { data: response, isLoading, error, refetch } = findAllUsers
 
   const updateURL = useCallback(
     (newPage: number, newLimit: number, newSearch: string): void => {

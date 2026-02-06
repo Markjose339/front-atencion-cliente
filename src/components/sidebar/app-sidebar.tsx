@@ -63,7 +63,7 @@ const data = {
     },
     {
       title: "Ventanillas",
-      url: "/service-windows",
+      url: "/windows",
       icon: Ticket,
     },
     {
