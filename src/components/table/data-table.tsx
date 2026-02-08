@@ -56,6 +56,8 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = "Buscar...",
   totalItems = 0,
 }: DataTableProps<TData, TValue>) {
+  "use no memo" 
+
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [localSearch, setLocalSearch] = React.useState(searchValue)
@@ -75,16 +77,21 @@ export function DataTable<TData, TValue>({
     setLocalSearch(searchValue)
   }, [searchValue])
 
+  const handlePaginationChange = React.useCallback(
+    (updater: PaginationState | ((old: PaginationState) => PaginationState)) => {
+      const currentPagination: PaginationState = { pageIndex, pageSize }
+      const newPagination = typeof updater === "function" ? updater(currentPagination) : updater
+      onPaginationChange?.(newPagination)
+    },
+    [onPaginationChange, pageIndex, pageSize],
+  )
+
   const table = useReactTable({
     data,
     columns,
     manualPagination: true,
     pageCount,
-    onPaginationChange: (updater) => {
-      const currentPagination: PaginationState = { pageIndex, pageSize }
-      const newPagination = typeof updater === "function" ? updater(currentPagination) : updater
-      onPaginationChange?.(newPagination)
-    },
+    onPaginationChange: handlePaginationChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
@@ -105,30 +112,31 @@ export function DataTable<TData, TValue>({
 
   const getHeaderText = (column: Column<TData, unknown>): string => {
     const header = column.columnDef.header
-    
+
     if (typeof header === "string") {
       return header
     }
-    
+
     if (typeof header === "function") {
       try {
         const mockHeader: Header<TData, unknown> = {
           ...({} as Header<TData, unknown>),
           column,
         }
-        const headerElement = header({ 
-          column, 
+
+        const headerElement = header({
+          column,
           header: mockHeader,
-          table
+          table,
         })
-        
+
         if (headerElement && typeof headerElement === "object" && "props" in headerElement) {
           const props = (headerElement as React.ReactElement<{ children?: React.ReactNode }>).props
           if (props?.children) {
             const children = props.children
             if (Array.isArray(children)) {
               const textChild = children.find((child: unknown) => typeof child === "string")
-              return textChild || column.id
+              return (textChild as string) || column.id
             }
             if (typeof children === "string") {
               return children
@@ -139,7 +147,7 @@ export function DataTable<TData, TValue>({
         console.warn("Error rendering header:", error)
       }
     }
-    
+
     return column.id
   }
 
@@ -147,7 +155,7 @@ export function DataTable<TData, TValue>({
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 transform text-muted-foreground h-5 w-5" />
           <Input
             placeholder={searchPlaceholder}
             value={localSearch}
@@ -155,6 +163,7 @@ export function DataTable<TData, TValue>({
             className="w-full pl-10"
           />
         </div>
+
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -163,22 +172,21 @@ export function DataTable<TData, TValue>({
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end">
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    >
-                      {getHeaderText(column)}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
+                    {getHeaderText(column)}
+                  </DropdownMenuCheckboxItem>
+                ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -190,17 +198,14 @@ export function DataTable<TData, TValue>({
             <Card>
               <CardContent className="flex items-center justify-center py-8">
                 <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
                   <span className="ml-2">Cargando...</span>
                 </div>
               </CardContent>
             </Card>
           ) : table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <Card
-                key={row.id}
-                className="overflow-hidden shadow-sm border border-muted/40 rounded-2xl py-0"
-              >
+              <Card key={row.id} className="overflow-hidden shadow-sm border border-muted/40 rounded-2xl py-0">
                 {row.getVisibleCells().map((cell) => {
                   if (cell.column.id === "imageUrl") {
                     return (
@@ -221,23 +226,15 @@ export function DataTable<TData, TValue>({
 
                     if (isActionsColumn) {
                       return (
-                        <div
-                          key={cell.id}
-                          className="flex justify-center pt-3 border-t border-muted/30"
-                        >
+                        <div key={cell.id} className="flex justify-center pt-3 border-t border-muted/30">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </div>
                       )
                     }
 
                     return (
-                      <div
-                        key={cell.id}
-                        className="flex items-start justify-between gap-3 text-sm"
-                      >
-                        <span className="font-medium text-muted-foreground">
-                          {headerText}:
-                        </span>
+                      <div key={cell.id} className="flex items-start justify-between gap-3 text-sm">
+                        <span className="font-medium text-muted-foreground">{headerText}:</span>
                         <div className="text-right wrap-break-word max-w-[60%]">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </div>
@@ -250,9 +247,7 @@ export function DataTable<TData, TValue>({
           ) : (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                {searchValue
-                  ? "No se encontraron resultados para tu búsqueda."
-                  : "No hay datos disponibles."}
+                {searchValue ? "No se encontraron resultados para tu búsqueda." : "No hay datos disponibles."}
               </CardContent>
             </Card>
           )}
@@ -263,22 +258,21 @@ export function DataTable<TData, TValue>({
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    )
-                  })}
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
                 </TableRow>
               ))}
             </TableHeader>
+
             <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
                     <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
                       <span className="ml-2">Cargando...</span>
                     </div>
                   </TableCell>
@@ -287,7 +281,9 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))

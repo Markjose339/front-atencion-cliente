@@ -19,6 +19,8 @@ interface DataTablePaginationProps<TData> {
 }
 
 export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTablePaginationProps<TData>) {
+  "use no memo"
+
   const isMobile = useIsMobile()
   const currentPage = table.getState().pagination.pageIndex + 1
   const totalPages = table.getPageCount()
@@ -28,28 +30,20 @@ export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTableP
     const maxVisiblePages = isMobile ? 3 : 5
 
     if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i)
-      }
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
     } else {
       if (currentPage <= 3) {
-        for (let i = 1; i <= (isMobile ? 2 : 4); i++) {
-          pages.push(i)
-        }
+        for (let i = 1; i <= (isMobile ? 2 : 4); i++) pages.push(i)
         pages.push("...")
         pages.push(totalPages)
       } else if (currentPage >= totalPages - 2) {
         pages.push(1)
         pages.push("...")
-        for (let i = totalPages - (isMobile ? 1 : 3); i <= totalPages; i++) {
-          pages.push(i)
-        }
+        for (let i = totalPages - (isMobile ? 1 : 3); i <= totalPages; i++) pages.push(i)
       } else {
         pages.push(1)
         if (!isMobile) pages.push("...")
-        for (let i = currentPage - (isMobile ? 0 : 1); i <= currentPage + (isMobile ? 0 : 1); i++) {
-          pages.push(i)
-        }
+        for (let i = currentPage - (isMobile ? 0 : 1); i <= currentPage + (isMobile ? 0 : 1); i++) pages.push(i)
         if (!isMobile) pages.push("...")
         pages.push(totalPages)
       }
@@ -61,32 +55,39 @@ export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTableP
   const canGoToPrevious = table.getCanPreviousPage()
   const canGoToNext = table.getCanNextPage()
 
+  const pageSize = table.getState().pagination.pageSize
+  const showingNow = Math.min(pageSize, Math.max(totalItems - (currentPage - 1) * pageSize, 0))
+
   return (
     <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-muted-foreground text-sm text-center sm:flex-1 sm:text-left">
-        Mostrando {table.getFilteredRowModel().rows.length} de {totalItems} registros
+        Mostrando {showingNow} de {totalItems} registros
       </div>
+
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:space-x-6 lg:space-x-8">
         <div className="flex items-center justify-center gap-2 sm:justify-start">
           <p className="text-sm font-medium whitespace-nowrap">Filas por página</p>
+
           <Select
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${pageSize}`}
             onValueChange={(value) => {
               table.setPageSize(Number(value))
             }}
           >
             <SelectTrigger className="h-8 w-17.5">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue placeholder={pageSize} />
             </SelectTrigger>
+
             <SelectContent side="top">
-              {[5, 10, 20, 25, 30, 40, 50, 100].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
+              {[5, 10, 20, 25, 30, 40, 50, 100].map((ps) => (
+                <SelectItem key={ps} value={`${ps}`}>
+                  {ps}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+
         <Pagination className="w-auto mx-0">
           <PaginationContent className="gap-1">
             {!isMobile && (
@@ -95,9 +96,7 @@ export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTableP
                   href="#"
                   onClick={(e) => {
                     e.preventDefault()
-                    if (canGoToPrevious) {
-                      table.setPageIndex(0)
-                    }
+                    if (canGoToPrevious) table.setPageIndex(0)
                   }}
                   className="h-8 w-8 p-0"
                   aria-label="Ir a la primera página"
@@ -113,14 +112,13 @@ export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTableP
                 </PaginationLink>
               </PaginationItem>
             )}
+
             <PaginationItem>
               <PaginationLink
                 href="#"
                 onClick={(e) => {
                   e.preventDefault()
-                  if (canGoToPrevious) {
-                    table.previousPage()
-                  }
+                  if (canGoToPrevious) table.previousPage()
                 }}
                 className="h-8 w-8 p-0"
                 aria-label="Ir a la página anterior"
@@ -135,6 +133,7 @@ export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTableP
                 <ChevronLeft className="h-4 w-4" />
               </PaginationLink>
             </PaginationItem>
+
             {getPageNumbers().map((page, index) => (
               <PaginationItem key={index}>
                 {page === "..." ? (
@@ -154,14 +153,13 @@ export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTableP
                 )}
               </PaginationItem>
             ))}
+
             <PaginationItem>
               <PaginationLink
                 href="#"
                 onClick={(e) => {
                   e.preventDefault()
-                  if (canGoToNext) {
-                    table.nextPage()
-                  }
+                  if (canGoToNext) table.nextPage()
                 }}
                 className="h-8 w-8 p-0"
                 aria-label="Ir a la página siguiente"
@@ -176,15 +174,14 @@ export function DataTablePagination<TData>({ table, totalItems = 0 }: DataTableP
                 <ChevronRight className="h-4 w-4" />
               </PaginationLink>
             </PaginationItem>
+
             {!isMobile && (
               <PaginationItem>
                 <PaginationLink
                   href="#"
                   onClick={(e) => {
                     e.preventDefault()
-                    if (canGoToNext) {
-                      table.setPageIndex(table.getPageCount() - 1)
-                    }
+                    if (canGoToNext) table.setPageIndex(table.getPageCount() - 1)
                   }}
                   className="h-8 w-8 p-0"
                   aria-label="Ir a la última página"

@@ -9,16 +9,14 @@ export function useBranchesQuery({
   page,
   limit,
   search,
-  departmentId,
-}: UseQuery & { departmentId?: string }) {
+}: UseQuery) {
   const findAllBranches = useQuery({
-    queryKey: ["branches", page, limit, search, departmentId],
+    queryKey: ["branches", page, limit, search],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page!.toString(),
         limit: limit!.toString(),
         ...(search && { search }),
-        ...(departmentId && { departmentId }),
       });
 
       return api.get<ApiResponse<Branch>>(`/branches?${params.toString()}`);
