@@ -42,7 +42,6 @@ import {
 } from "@/components/ui/paginated-checkbox-list"
 import { Label } from "../ui/label"
 import { PasswordInput } from "../ui/passwrod-input"
-import { PaginatedCommandSelect } from "../ui/paginated-command-select"
 
 const ITEMS_PER_PAGE = 10
 
@@ -51,9 +50,6 @@ export function UserCreateDialog() {
 
   const [rolesPage, setRolesPage] = useState(1)
   const [rolesSearch, setRolesSearch] = useState("")
-
-  const [serviceWindowsPage, setServiceWindowsPage] = useState(1)
-  const [serviceWindowsSearch, setServiceWindowsSearch] = useState("")
 
   const { create } = useUsersMutation()
   
@@ -73,7 +69,6 @@ export function UserCreateDialog() {
       phone: "",
       isActive: true,
       roleIds: [],
-      serviceWindowId: undefined,
     },
   })
 
@@ -101,19 +96,12 @@ export function UserCreateDialog() {
       form.reset()
       setRolesPage(1)
       setRolesSearch("")
-      setServiceWindowsPage(1)
-      setServiceWindowsSearch("")
     }
   }
 
   const handleRolesSearchChange = (value: string) => {
     setRolesSearch(value)
     setRolesPage(1)
-  }
-
-  const handleServiceWindowsSearchChange = (value: string) => {
-    setServiceWindowsSearch(value)
-    setServiceWindowsPage(1)
   }
 
   return (

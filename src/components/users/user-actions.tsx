@@ -7,6 +7,7 @@ import { Button } from "../ui/button";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { UserEditDialog } from "./user-edit-dialog";
 import { UserDeleteDialog } from "./user-delete-dialog";
+import { Protected } from "../auth/protected";
 
 interface UserActionsProps {
   user: User
@@ -33,18 +34,21 @@ export function UserActions({ user }: UserActionsProps) {
             Copiar ID del usuario
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="flex items-center text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => setOpenDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar usuarios"]}>
+            <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
+          <Protected permissions={["eliminar usuarios"]}>
+            <DropdownMenuItem
+              className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+              onClick={() => setOpenDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
         </DropdownMenuContent>
       </DropdownMenu>
       <UserEditDialog

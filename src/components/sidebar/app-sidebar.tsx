@@ -1,24 +1,14 @@
 "use client"
 
 import * as React from "react"
-import {
-  Building,
-  Command,
-  Frame,
-  Home, LifeBuoy,
-  Map,
-  MessageSquare,
-  PieChart,
-  Send,
-  Shield,
-  Ticket,
-  UserCog,
-  Users,
-} from "lucide-react"
+import Link from "next/link"
+import { Command } from "lucide-react"
 
 import { NavMain } from "@/components/sidebar/nav-main"
 import { NavSecondary } from "@/components/sidebar/nav-secondary"
 import { NavUser } from "@/components/sidebar/nav-user"
+import { sidebarData } from "./nav-config"
+
 import {
   Sidebar,
   SidebarContent,
@@ -27,95 +17,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
-
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: Home,
-    },
-    {
-      title: "Usuarios",
-      url: "/users",
-      icon: Users,
-    },
-    {
-      title: "Roles",
-      url: "/roles",
-      icon: UserCog,
-    },
-    {
-      title: "Permisos",
-      url: "/permissions",
-      icon: Shield,
-    },
-    {
-      title: "Sucursales",
-      url: "/branches",
-      icon: Building ,
-    },
-    {
-      title: "Ventanillas",
-      url: "/windows",
-      icon: Ticket,
-    },
-    {
-      title: "Servicios",
-      url: "/services",
-      icon: Frame,
-    },
-    {
-      title: "Asignaciones",
-      url: "/assignments",
-      icon: Map,
-    },
-    {
-      title: "Atencion al Cliente",
-      url: "/customer-service",
-      icon: MessageSquare,
-    }
-  ],
-  navSecondary: [
-    {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
-}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar variant="inset" {...props}>
+    <Sidebar collapsible="icon"{...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#">
+              <Link href="/dashboard">
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Command className="size-4" />
                 </div>
@@ -123,18 +35,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className="truncate font-medium">A.G.B.C.</span>
                   <span className="truncate text-xs">Empresa</span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain groups={sidebarData.main} />
+        <NavSecondary items={sidebarData.secondary} className="mt-auto" />
       </SidebarContent>
+
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   )
 }

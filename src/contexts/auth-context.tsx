@@ -1,48 +1,44 @@
-"use client";
+"use client"
 
-import { api, isAuthenticated } from "@/lib/api";
-import { LoginType } from "@/lib/schemas/login.schema";
-import { AuthContextType, User } from "@/types/auth";
-import { useRouter } from "next/navigation";
+import { api, isAuthenticated } from "@/lib/api"
+import { LoginType } from "@/lib/schemas/login.schema"
+import { AuthContextType, User } from "@/types/auth"
+import { useRouter } from "next/navigation"
 import {
   createContext,
   ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-} from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+} from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+  const context = useContext(AuthContext)
+  if (!context) throw new Error("useAuth must be used dentro de AuthProvider")
+  return context
+}
 
 const fetchUser = async (): Promise<User | null> => {
-  if (!isAuthenticated()) return null;
-
-  const data = await api.get<{ user: User }>("/auth/me");
-  return data.user;
-};
+  if (!isAuthenticated()) return null
+  const data = await api.get<{ user: User }>("/auth/me")
+  return data.user
+}
 
 const loginUser = async (credentials: LoginType): Promise<User> => {
-  const data = await api.post<{ user: User }>("/auth/login", credentials);
-  return data.user;
-};
+  const data = await api.post<{ user: User }>("/auth/login", credentials)
+  return data.user
+}
 
 const logoutUser = async (): Promise<void> => {
-  await api.post<void>("/auth/logout");
-};
+  await api.post<void>("/auth/logout")
+}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const router = useRouter();
-  const queryClient = useQueryClient();
+  const router = useRouter()
+  const queryClient = useQueryClient()
 
   const {
     data: user = null,
@@ -54,81 +50,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-  });
-
-  useEffect(() => {
-    const handleTokenRefreshed = (): void => {
-      queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
-    };
-
-    const handleTokenRefreshFailed = (): void => {
-      queryClient.setQueryData(["auth", "user"], null);
-      queryClient.clear();
-      router.push("/login");
-    };
-
-    window.addEventListener("token-refreshed", handleTokenRefreshed);
-    window.addEventListener("token-refresh-failed", handleTokenRefreshFailed);
-
-    return () => {
-      window.removeEventListener("token-refreshed", handleTokenRefreshed);
-      window.removeEventListener(
-        "token-refresh-failed",
-        handleTokenRefreshFailed,
-      );
-    };
-  }, [queryClient, router]);
+  })
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
     onSuccess: (userData: User) => {
-      queryClient.setQueryData(["auth", "user"], userData);
-      router.push("/dashboard");
+      queryClient.setQueryData(["auth", "user"], userData)
+      router.push("/dashboard")
     },
-  });
+  })
 
   const logoutMutation = useMutation({
     mutationFn: logoutUser,
     onSuccess: () => {
-      queryClient.setQueryData(["auth", "user"], null);
-      queryClient.clear();
-      router.push("/login");
+      queryClient.setQueryData(["auth", "user"], null)
+      queryClient.clear()
+      router.push("/login")
     },
-  });
+  })
 
   const login = useCallback(
     async (credentials: LoginType): Promise<void> => {
-      await loginMutation.mutateAsync(credentials);
+      await loginMutation.mutateAsync(credentials)
     },
     [loginMutation],
-  );
+  )
 
   const logout = useCallback(async (): Promise<void> => {
-    await logoutMutation.mutateAsync();
-  }, [logoutMutation]);
+    await logoutMutation.mutateAsync()
+  }, [logoutMutation])
 
   const hasPermission = useCallback(
     (permission: string): boolean =>
-      user?.permissions.includes(permission) ?? false,
+      (user?.permissions ?? []).includes(permission),
     [user],
-  );
+  )
 
-  const hasAnyPermission = useCallback(
+  const anyPermissions = useCallback(
     (permissions: string[]): boolean =>
-      user ? permissions.some(p => user.permissions.includes(p)) : false,
+      permissions.some((p) => (user?.permissions ?? []).includes(p)),
     [user],
-  );
+  )
 
   const hasRole = useCallback(
-    (role: string): boolean => user?.roles.includes(role) ?? false,
+    (role: string): boolean => (user?.roles ?? []).includes(role),
     [user],
-  );
+  )
 
-  const hasAnyRole = useCallback(
+  const anyRoles = useCallback(
     (roles: string[]): boolean =>
-      user ? roles.some(r => user.roles.includes(r)) : false,
+      roles.some((r) => (user?.roles ?? []).includes(r)),
     [user],
-  );
+  )
+
+  const hasNoAccessRules =
+    !!user &&
+    (user.roles?.length ?? 0) === 0 &&
+    (user.permissions?.length ?? 0) === 0
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -138,9 +116,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       hasPermission,
-      hasAnyPermission,
+      anyPermissions,
       hasRole,
-      hasAnyRole,
+      anyRoles,
+      hasNoAccessRules,
     }),
     [
       user,
@@ -148,15 +127,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       hasPermission,
-      hasAnyPermission,
+      anyPermissions,
       hasRole,
-      hasAnyRole,
+      anyRoles,
+      hasNoAccessRules,
     ],
-  );
+  )
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
