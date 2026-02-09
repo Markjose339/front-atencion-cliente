@@ -14,6 +14,7 @@ import {
 import BranchEditDialog from "@/components/branches/branch-edit-dialog";
 import { BranchDeleteDialog } from "@/components/branches/branch-delete-dialog";
 import { Branch } from "@/types/branch";
+import { Protected } from "@/components/auth/protected";
 
 interface BranchActionsProps {
   branch: Branch;
@@ -42,18 +43,22 @@ export function BranchActions({ branch }: BranchActionsProps) {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar sucursales"]}>
+            <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
 
-          <DropdownMenuItem
-            className="flex items-center text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => setOpenDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["eliminar sucursales"]}>
+            <DropdownMenuItem
+              className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+              onClick={() => setOpenDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
         </DropdownMenuContent>
       </DropdownMenu>
 

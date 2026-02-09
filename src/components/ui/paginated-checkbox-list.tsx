@@ -94,7 +94,7 @@ export function PaginatedCheckboxList<T extends PaginatedItem>({
         />
       </div>
 
-      <div className="max-h-56 overflow-y-auto space-y-2">
+      <div className="max-h-86 overflow-y-auto space-y-2">
         {isLoading && (
           <p className="text-sm text-muted-foreground text-center py-6">
             Cargando resultados…

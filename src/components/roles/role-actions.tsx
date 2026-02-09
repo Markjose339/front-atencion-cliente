@@ -14,6 +14,7 @@ import {
 import { Role } from "@/types/role";
 import { RoleDeleteDialog } from "./role-delete-dialog";
 import { RoleEditDialog } from "./role-edit-dialog";
+import { Protected } from "@/components/auth/protected";
 
 interface RoleActionsProps {
   role: Role;
@@ -41,17 +42,21 @@ export function RoleActions({ role }: RoleActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className="flex items-center text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => setOpenDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar roles"]}>
+            <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
+          <Protected permissions={["eliminar roles"]}>
+            <DropdownMenuItem 
+              className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+              onClick={() => setOpenDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
         </DropdownMenuContent>
       </DropdownMenu>
       <RoleEditDialog

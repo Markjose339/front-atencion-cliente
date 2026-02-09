@@ -83,7 +83,7 @@ export const sidebarData: {
           url: "/branches",
           icon: Building,
           access: {
-            permissions: ["branches.view"]
+            permissions: ["ver sucursales"]
           }
         },
         {
@@ -91,20 +91,26 @@ export const sidebarData: {
           url: "/windows",
           icon: Ticket,
           access: {
-            permissions: ["windows.view"]
+            permissions: ["ver ventanillas"]
           }
         },
 
         {
           title: "Servicios",
           url: "/services",
-          icon: Frame
+          icon: Frame,
+          access: {
+            permissions: ["ver servicios"]
+          }
         },
 
         {
           title: "Asignaciones",
           url: "/assignments",
           icon: Map,
+          access: {
+            permissions: ["ver asignaciones"]
+          }
         },
 
         {
@@ -112,7 +118,7 @@ export const sidebarData: {
           url: "/customer-service",
           icon: MessageSquare,
           access: {
-            permissions: ["support.view"]
+            permissions: ["ver atencion al cliente"]
           }
         },
       ],

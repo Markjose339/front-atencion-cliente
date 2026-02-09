@@ -1,7 +1,11 @@
-export default function DashboardPage(){
+import { RouteGuard } from "@/components/auth/route-guard";
+
+export default function DashboardPage() {
   return (
-    <div>
-      dashboard
-    </div>
+    <RouteGuard>
+      <div>
+        dashboard
+      </div>
+    </RouteGuard>
   )
 }

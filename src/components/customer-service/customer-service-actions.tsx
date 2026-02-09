@@ -4,6 +4,7 @@ import { CustomerService } from "@/types/customer-service"
 import { Button } from "../ui/button";
 import { useCustomerServiceMutation } from "@/hooks/use-customer-service";
 import { toast } from "sonner";
+import { Protected } from "../auth/protected";
 
 interface CustomerServiceActionsProps {
   customerService: CustomerService;
@@ -32,24 +33,26 @@ export function CustomerServiceActions({ customerService }: CustomerServiceActio
 
   return (
     <div>
-      {isInAttention ? (
-        <Button
-          type="button"
-          onClick={() => onSubmitEndTicketAttention(customerService.id)}
-          disabled={endTicketAttention.isPending}
-          variant="destructive"
-        >
-          {endTicketAttention.isPending ? "Finalizando..." : "Finalizar"}
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          onClick={() => onSubmitStartTicketAttention(customerService.id)}
-          disabled={startTicketAttention.isPending}
-        >
-          {startTicketAttention.isPending ? "Atendiendo..." : "Atender"}
-        </Button>
-      )}
+      <Protected permissions={["ver atencion al cliente"]}>
+        {isInAttention ? (
+          <Button
+            type="button"
+            onClick={() => onSubmitEndTicketAttention(customerService.id)}
+            disabled={endTicketAttention.isPending}
+            variant="destructive"
+          >
+            {endTicketAttention.isPending ? "Finalizando..." : "Finalizar"}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={() => onSubmitStartTicketAttention(customerService.id)}
+            disabled={startTicketAttention.isPending}
+          >
+            {startTicketAttention.isPending ? "Atendiendo..." : "Atender"}
+          </Button>
+        )}
+      </Protected>
     </div>
   )
 }

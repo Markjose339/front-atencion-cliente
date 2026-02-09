@@ -14,6 +14,7 @@ import {
 import { Window } from "@/types/window";
 import WindowEditDialog from "@/components/windows/window-edit-dialog";
 import { WindowDeleteDialog } from "@/components/windows/window-delete-dialog";
+import { Protected } from "@/components/auth/protected";
 
 interface WindowActionsProps {
   window: Window;
@@ -42,18 +43,22 @@ export function WindowActions({ window }: WindowActionsProps) {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar ventanillas"]}>
+            <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
 
-          <DropdownMenuItem
-            className="flex items-center text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => setOpenDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["eliminar ventanillas"]}>
+            <DropdownMenuItem
+              className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+              onClick={() => setOpenDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AssignmentEditDialog from "@/components/assignments/assignment-edit-dialog";
 import { AssignmentDeleteDialog } from "@/components/assignments/assignment-delete-dialog";
+import { Protected } from "@/components/auth/protected";
 
 interface AssignmentActionsProps {
   assignment: Assignment;
@@ -40,23 +41,27 @@ export function AssignmentActions({ assignment }: AssignmentActionsProps) {
           <DropdownMenuItem
             onClick={() => navigator.clipboard.writeText(assignment.id)}
           >
-            Copiar ID de asignaciÃ³n
+            Copiar ID de asignación
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar asignaciones"]}>
+            <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
 
-          <DropdownMenuItem
-            className="flex items-center text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => setOpenDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["eliminar asignaciones"]}>
+            <DropdownMenuItem
+              className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+              onClick={() => setOpenDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
         </DropdownMenuContent>
       </DropdownMenu>
 

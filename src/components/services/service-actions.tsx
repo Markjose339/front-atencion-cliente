@@ -14,6 +14,7 @@ import {
 import { Service } from "@/types/service";
 import ServiceEditDialog from "./service-edit-dialog";
 import { ServiceDeleteDialog } from "./service-delete-dialog";
+import { Protected } from "@/components/auth/protected";
 
 interface ServiceActionsProps {
   service: Service;
@@ -42,18 +43,22 @@ export function ServiceActions({ service }: ServiceActionsProps) {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar servicios"]}>
+            <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
 
-          <DropdownMenuItem
-            className="flex items-center text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => setOpenDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["eliminar servicios"]}>
+            <DropdownMenuItem
+              className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+              onClick={() => setOpenDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -18,6 +18,7 @@ import {
 import PermissionEditDialog from "@/components/permissions/permission-edit-dialog";
 import { PermissionDeleteDialog } from "@/components/permissions/permission-delete-dialog";
 import { Permission } from "@/types/permission";
+import { Protected } from "@/components/auth/protected";
 
 interface PermissionActionsProps {
   permission: Permission;
@@ -45,17 +46,21 @@ export function PermissionActions({ permission }: PermissionActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className="flex items-center text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => setOpenDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar permisos"]}>
+            <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
+          <Protected permissions={["eliminar permisos"]}>
+            <DropdownMenuItem 
+              className="flex items-center text-destructive focus:text-destructive cursor-pointer"
+              onClick={() => setOpenDeleteDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
         </DropdownMenuContent>
       </DropdownMenu>
       <PermissionEditDialog
