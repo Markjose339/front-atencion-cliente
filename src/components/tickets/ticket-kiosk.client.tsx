@@ -20,6 +20,7 @@ const IDLE_RESET_MS = 2 * 60 * 1000
 export default function TicketKioskClient() {
   const { data: branches, isLoading: loadingBranches } = usePublicBranches()
   const [branchId, setBranchId] = useState<string>(() => getKioskBranchId() ?? "")
+  const [sessionKey, setSessionKey] = useState(0)
 
   const view = useMemo<"setup" | "tickets">(() => {
     return branchId ? "tickets" : "setup"
@@ -39,27 +40,27 @@ export default function TicketKioskClient() {
   }
 
   const idleTimer = useRef<number | null>(null)
+
   useEffect(() => {
+    if (!branchId) return
+
     const kick = () => {
       if (idleTimer.current) window.clearTimeout(idleTimer.current)
       idleTimer.current = window.setTimeout(() => {
-        if (getKioskBranchId()) {
-          clearKioskBranchId()
-          setBranchId("")
-          toast.message("Sesión reiniciada por inactividad")
-        }
+        setSessionKey((k) => k + 1)
+        toast.message("Sesión reiniciada por inactividad")
       }, IDLE_RESET_MS)
     }
 
     kick()
-    const events = ["click", "touchstart", "mousemove", "keydown", "scroll"]
+    const events = ["click", "touchstart", "mousemove", "keydown", "scroll"] as const
     events.forEach((e) => window.addEventListener(e, kick, { passive: true }))
 
     return () => {
       if (idleTimer.current) window.clearTimeout(idleTimer.current)
       events.forEach((e) => window.removeEventListener(e, kick))
     }
-  }, [])
+  }, [branchId])
 
   if (view === "tickets") {
     return (
@@ -70,7 +71,8 @@ export default function TicketKioskClient() {
             Cambiar sucursal
           </Button>
         </div>
-        <TicketCreate branchId={branchId} />
+
+        <TicketCreate key={sessionKey} branchId={branchId} />
       </div>
     )
   }
