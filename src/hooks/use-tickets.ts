@@ -5,13 +5,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function useTicketsMutation() {
   const queryClient = useQueryClient()
-  
+
   const create = useMutation({
-    mutationFn: (values: TicketSchemaType) =>
-      api.post<Ticket>("/tickets", values),
+    mutationFn: (values: TicketSchemaType) => api.post<Ticket>("/tickets", values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"], exact: false })
-    }
+    },
   })
 
   return { create }

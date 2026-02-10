@@ -96,10 +96,10 @@ export function AssignmentCreateDialog() {
 
   async function onSubmit(values: AssignmentSchemaType) {
     toast.promise(create.mutateAsync(values), {
-      loading: "Creando asignaciÃ³n...",
+      loading: "Creando asignación...",
       success: () => {
         handleOpenChange(false);
-        return "AsignaciÃ³n creada exitosamente";
+        return "Asignación creada exitosamente";
       },
       error: (error: Error) => error.message,
     });
