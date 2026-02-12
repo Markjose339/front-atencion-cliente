@@ -7,12 +7,12 @@ import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import {
-  CreateWindowServiceAssignmentSchema,
-  CreateWindowServiceAssignmentSchemaType,
+  CreateOperatorAssignmentSchema,
+  CreateOperatorAssignmentSchemaType,
 } from "@/lib/schemas/assignment.schema";
-import { useWindowServiceAssignmentsMutation } from "@/hooks/use-assignments";
+import { useOperatorAssignmentsMutation } from "@/hooks/use-assignments";
 import { useBranchesQuery } from "@/hooks/use-branches";
-import { useServicesQuery } from "@/hooks/use-services";
+import { useUsersQuery } from "@/hooks/use-users";
 import { useWindowsQuery } from "@/hooks/use-windows";
 
 import { Button } from "@/components/ui/button";
@@ -43,17 +43,17 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 
-export function AssignmentCreateDialog() {
+export function OperatorAssignmentCreateDialog() {
   const [open, setOpen] = useState(false);
 
   const [branchesPage, setBranchesPage] = useState(1);
   const [branchesSearch, setBranchesSearch] = useState("");
   const [windowsPage, setWindowsPage] = useState(1);
   const [windowsSearch, setWindowsSearch] = useState("");
-  const [servicesPage, setServicesPage] = useState(1);
-  const [servicesSearch, setServicesSearch] = useState("");
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersSearch, setUsersSearch] = useState("");
 
-  const { create } = useWindowServiceAssignmentsMutation();
+  const { create } = useOperatorAssignmentsMutation();
 
   const { findAllBranches } = useBranchesQuery({
     page: branchesPage,
@@ -67,18 +67,18 @@ export function AssignmentCreateDialog() {
     search: windowsSearch,
   });
 
-  const { findAllServices } = useServicesQuery({
-    page: servicesPage,
+  const { findAllUsers } = useUsersQuery({
+    page: usersPage,
     limit: ITEMS_PER_PAGE,
-    search: servicesSearch,
+    search: usersSearch,
   });
 
-  const form = useForm<CreateWindowServiceAssignmentSchemaType>({
-    resolver: zodResolver(CreateWindowServiceAssignmentSchema),
+  const form = useForm<CreateOperatorAssignmentSchemaType>({
+    resolver: zodResolver(CreateOperatorAssignmentSchema),
     defaultValues: {
       branchId: "",
       windowId: "",
-      serviceId: "",
+      userId: "",
       isActive: true,
     },
   });
@@ -101,14 +101,14 @@ export function AssignmentCreateDialog() {
     );
   }, [findAllWindows.data]);
 
-  const serviceOptions = useMemo<PaginatedItem[]>(() => {
+  const userOptions = useMemo<PaginatedItem[]>(() => {
     return (
-      findAllServices.data?.data.map((service) => ({
-        id: service.id,
-        label: `${service.name} (${service.code})`,
+      findAllUsers.data?.data.map((user) => ({
+        id: user.id,
+        label: `${user.name} (${user.email})`,
       })) ?? []
     );
-  }, [findAllServices.data]);
+  }, [findAllUsers.data]);
 
   const handleOpenChange = (value: boolean) => {
     setOpen(value);
@@ -119,17 +119,17 @@ export function AssignmentCreateDialog() {
       setBranchesSearch("");
       setWindowsPage(1);
       setWindowsSearch("");
-      setServicesPage(1);
-      setServicesSearch("");
+      setUsersPage(1);
+      setUsersSearch("");
     }
   };
 
-  const onSubmit = async (values: CreateWindowServiceAssignmentSchemaType) => {
+  const onSubmit = async (values: CreateOperatorAssignmentSchemaType) => {
     toast.promise(create.mutateAsync(values), {
-      loading: "Creando asignacion de servicio...",
+      loading: "Creando asignacion de operador...",
       success: () => {
         handleOpenChange(false);
-        return "Asignacion de servicio creada";
+        return "Asignacion de operador creada";
       },
       error: (error) => (error as { message?: string })?.message ?? "Error al crear",
     });
@@ -140,15 +140,15 @@ export function AssignmentCreateDialog() {
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Nueva asignacion de servicio
+          Nueva asignacion de operador
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Asignar servicio a ventanilla</DialogTitle>
+          <DialogTitle>Asignar operador a ventanilla</DialogTitle>
           <DialogDescription>
-            Define que servicio estara habilitado en una ventanilla de una sucursal.
+            Define en que ventanilla y sucursal trabajara el operador.
           </DialogDescription>
         </DialogHeader>
 
@@ -212,25 +212,25 @@ export function AssignmentCreateDialog() {
 
             <FormField
               control={form.control}
-              name="serviceId"
+              name="userId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Servicio</FormLabel>
+                  <FormLabel>Operador</FormLabel>
                   <FormControl>
                     <PaginatedCommandSelect
-                      items={serviceOptions}
+                      items={userOptions}
                       value={field.value}
-                      placeholder="Selecciona un servicio"
-                      search={servicesSearch}
-                      page={servicesPage}
-                      totalPages={findAllServices.data?.meta.totalPages ?? 1}
-                      isLoading={findAllServices.isLoading}
+                      placeholder="Selecciona un usuario"
+                      search={usersSearch}
+                      page={usersPage}
+                      totalPages={findAllUsers.data?.meta.totalPages ?? 1}
+                      isLoading={findAllUsers.isLoading}
                       onChange={field.onChange}
                       onSearchChange={(value) => {
-                        setServicesSearch(value);
-                        setServicesPage(1);
+                        setUsersSearch(value);
+                        setUsersPage(1);
                       }}
-                      onPageChange={setServicesPage}
+                      onPageChange={setUsersPage}
                     />
                   </FormControl>
                   <FormMessage />
@@ -254,7 +254,7 @@ export function AssignmentCreateDialog() {
                       <div className="grid gap-1.5 font-normal">
                         <p className="text-sm leading-none font-medium">Asignacion activa</p>
                         <p className="text-muted-foreground text-sm">
-                          Si esta desactivada, el servicio no se podra atender en esa ventanilla.
+                          Si esta desactivada, el operador no podra atender en esa ventanilla.
                         </p>
                       </div>
                     </Label>

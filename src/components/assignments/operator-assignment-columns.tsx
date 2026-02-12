@@ -3,10 +3,11 @@
 import { Column, ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 
-import { WindowServiceAssignment } from "@/types/assignment";
+import { OperatorAssignment } from "@/types/assignment";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AssignmentActions } from "@/components/assignments/assignment-actions";
+
+import { OperatorAssignmentActions } from "./operator-assignment-actions";
 
 interface SortableHeaderProps<TData> {
   column: Column<TData, unknown>;
@@ -22,7 +23,18 @@ function SortableHeader<TData>({ column, title }: SortableHeaderProps<TData>) {
   );
 }
 
-export const assignmentColumns = (): ColumnDef<WindowServiceAssignment>[] => [
+export const operatorAssignmentColumns = (): ColumnDef<OperatorAssignment>[] => [
+  {
+    id: "user",
+    accessorFn: (row) => row.user.name,
+    header: ({ column }) => <SortableHeader column={column} title="Operador" />,
+    cell: ({ row }) => (
+      <div className="space-y-0.5">
+        <div className="font-medium">{row.original.user.name}</div>
+        <div className="text-xs text-muted-foreground">{row.original.user.email}</div>
+      </div>
+    ),
+  },
   {
     id: "branch",
     accessorFn: (row) => row.branch.name,
@@ -40,17 +52,6 @@ export const assignmentColumns = (): ColumnDef<WindowServiceAssignment>[] => [
     ),
   },
   {
-    id: "service",
-    accessorFn: (row) => row.service.name,
-    header: ({ column }) => <SortableHeader column={column} title="Servicio" />,
-    cell: ({ row }) => (
-      <div className="space-y-0.5">
-        <div className="font-medium">{row.original.service.name}</div>
-        <div className="text-xs text-muted-foreground">{row.original.service.abbreviation}</div>
-      </div>
-    ),
-  },
-  {
     id: "status",
     accessorFn: (row) => row.isActive,
     header: "Estado",
@@ -63,7 +64,7 @@ export const assignmentColumns = (): ColumnDef<WindowServiceAssignment>[] => [
   {
     id: "actions",
     header: "Acciones",
-    cell: ({ row }) => <AssignmentActions assignment={row.original} />,
+    cell: ({ row }) => <OperatorAssignmentActions assignment={row.original} />,
     enableSorting: false,
     enableHiding: false,
   },

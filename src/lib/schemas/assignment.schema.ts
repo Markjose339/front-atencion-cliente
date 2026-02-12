@@ -1,22 +1,45 @@
 ﻿import { z } from "zod";
 
-export const AssignmentSchema = z.object({
-  branchId: z
+const idField = (label: string) =>
+  z
     .string()
-    .min(1, "La sucursal es obligatoria")
-    .max(24, "El id de la sucursal no puede exceder los 24 caracteres"),
-  windowId: z
-    .string()
-    .min(1, "La ventanilla es obligatoria")
-    .max(24, "El id de la ventanilla no puede exceder los 24 caracteres"),
-  serviceId: z
-    .string()
-    .min(1, "El servicio es obligatorio")
-    .max(24, "El id del servicio no puede exceder los 24 caracteres"),
-  userId: z
-    .string()
-    .min(1, "El usuario es obligatorio")
-    .max(24, "El id del usuario no puede exceder los 24 caracteres"),
+    .min(1, `${label} es obligatorio`)
+    .max(24, `El id de ${label.toLowerCase()} no puede exceder los 24 caracteres`);
+
+export const CreateWindowServiceAssignmentSchema = z.object({
+  branchId: idField("La sucursal"),
+  windowId: idField("La ventanilla"),
+  serviceId: idField("El servicio"),
+  isActive: z.boolean().default(true),
 });
 
-export type AssignmentSchemaType = z.infer<typeof AssignmentSchema>;
+export const UpdateWindowServiceAssignmentSchema = z.object({
+  isActive: z.boolean(),
+});
+
+export const CreateOperatorAssignmentSchema = z.object({
+  branchId: idField("La sucursal"),
+  windowId: idField("La ventanilla"),
+  userId: idField("El usuario"),
+  isActive: z.boolean().default(true),
+});
+
+export const UpdateOperatorAssignmentSchema = z.object({
+  isActive: z.boolean(),
+});
+
+export type CreateWindowServiceAssignmentSchemaType = z.infer<
+  typeof CreateWindowServiceAssignmentSchema
+>;
+
+export type UpdateWindowServiceAssignmentSchemaType = z.infer<
+  typeof UpdateWindowServiceAssignmentSchema
+>;
+
+export type CreateOperatorAssignmentSchemaType = z.infer<
+  typeof CreateOperatorAssignmentSchema
+>;
+
+export type UpdateOperatorAssignmentSchemaType = z.infer<
+  typeof UpdateOperatorAssignmentSchema
+>;

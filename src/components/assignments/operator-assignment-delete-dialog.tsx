@@ -3,8 +3,8 @@
 import { ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
-import { useWindowServiceAssignmentsMutation } from "@/hooks/use-assignments";
-import { WindowServiceAssignment } from "@/types/assignment";
+import { useOperatorAssignmentsMutation } from "@/hooks/use-assignments";
+import { OperatorAssignment } from "@/types/assignment";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,18 +17,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 
-interface AssignmentDeleteDialogProps {
-  assignment: WindowServiceAssignment;
+interface OperatorAssignmentDeleteDialogProps {
+  assignment: OperatorAssignment;
   open: boolean;
   onOpenChange: (val: boolean) => void;
 }
 
-export function AssignmentDeleteDialog({
+export function OperatorAssignmentDeleteDialog({
   assignment,
   open,
   onOpenChange,
-}: AssignmentDeleteDialogProps) {
-  const { remove } = useWindowServiceAssignmentsMutation();
+}: OperatorAssignmentDeleteDialogProps) {
+  const { remove } = useOperatorAssignmentsMutation();
 
   const handleDelete = async () => {
     toast.promise(remove.mutateAsync(assignment.id), {
@@ -46,7 +46,7 @@ export function AssignmentDeleteDialog({
             <div className="rounded-full bg-destructive/10 p-2">
               <ShieldAlert className="h-5 w-5 text-destructive" />
             </div>
-            <AlertDialogTitle>Eliminar asignacion de servicio</AlertDialogTitle>
+            <AlertDialogTitle>Eliminar asignacion de operador</AlertDialogTitle>
           </div>
 
           <AlertDialogDescription className="pt-2">
@@ -54,9 +54,9 @@ export function AssignmentDeleteDialog({
           </AlertDialogDescription>
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <Badge variant="destructive">{assignment.branch.name}</Badge>
-            <Badge variant="secondary">{assignment.window.name}</Badge>
-            <Badge variant="outline">{assignment.service.name}</Badge>
+            <Badge variant="destructive">{assignment.user.name}</Badge>
+            <Badge variant="secondary">{assignment.branch.name}</Badge>
+            <Badge variant="outline">{assignment.window.name}</Badge>
           </div>
         </AlertDialogHeader>
 

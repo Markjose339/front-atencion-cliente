@@ -22,6 +22,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 import {
   Form,
@@ -38,24 +40,24 @@ export function WindowCreateDialog() {
 
   const form = useForm<WindowSchemaType>({
     resolver: zodResolver(WindowSchema),
-    defaultValues: { name: "" },
+    defaultValues: { name: "", code: "", isActive: true },
   });
 
   async function onSubmit(values: WindowSchemaType) {
     toast.promise(create.mutateAsync(values), {
-      loading: "Creando ventana...",
+      loading: "Creando ventanilla...",
       success: (data) => {
         setOpen(false);
-        form.reset();
-        return `Ventana "${data.name}" creada exitosamente`;
+        form.reset({ name: "", code: "", isActive: true });
+        return `Ventanilla "${data.name}" creada exitosamente`;
       },
-      error: (error) => error.message,
+      error: (error) => error?.message || "Error desconocido",
     });
   }
 
   const handleOpenChange = (value: boolean) => {
     setOpen(value);
-    if (!value) form.reset();
+    if (!value) form.reset({ name: "", code: "", isActive: true });
   };
 
   return (
@@ -63,15 +65,15 @@ export function WindowCreateDialog() {
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Nueva Ventana
+          Nueva Ventanilla
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
-          <DialogTitle>Crear Nueva Ventana</DialogTitle>
+          <DialogTitle>Crear Nueva Ventanilla</DialogTitle>
           <DialogDescription>
-            Complete el formulario para crear una nueva ventana.
+            Complete el formulario para crear una nueva ventanilla.
           </DialogDescription>
         </DialogHeader>
 
@@ -85,11 +87,67 @@ export function WindowCreateDialog() {
                   <FormLabel>Nombre</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Nombre de la ventana"
+                      placeholder="Nombre de la ventanilla"
                       {...field}
                       disabled={create.isPending}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ej: VENT-01"
+                      {...field}
+                      disabled={create.isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Label
+                      className="
+                        hover:bg-accent/50
+                        flex items-start gap-3
+                        rounded-lg border p-3
+                        cursor-pointer transition-colors
+                        has-checked:border-primary
+                        has-checked:bg-primary/5
+                      "
+                    >
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => field.onChange(!!checked)}
+                        disabled={create.isPending}
+                      />
+
+                      <div className="grid gap-1.5 font-normal">
+                        <p className="text-sm leading-none font-medium">
+                          Ventanilla activa
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          La ventanilla estará disponible para atención al público.
+                        </p>
+                      </div>
+                    </Label>
+                  </FormControl>
+
                   <FormMessage />
                 </FormItem>
               )}
@@ -100,7 +158,7 @@ export function WindowCreateDialog() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => form.reset()}
+                  onClick={() => form.reset({ name: "", code: "", isActive: true })}
                   disabled={create.isPending}
                 >
                   Cancelar
@@ -108,7 +166,7 @@ export function WindowCreateDialog() {
               </DialogClose>
 
               <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Guardando..." : "Guardar Ventana"}
+                {create.isPending ? "Guardando..." : "Guardar Ventanilla"}
               </Button>
             </DialogFooter>
           </form>

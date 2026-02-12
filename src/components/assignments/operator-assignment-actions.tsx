@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
-import { WindowServiceAssignment } from "@/types/assignment";
+import { OperatorAssignment } from "@/types/assignment";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,15 +13,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import AssignmentEditDialog from "@/components/assignments/assignment-edit-dialog";
-import { AssignmentDeleteDialog } from "@/components/assignments/assignment-delete-dialog";
 import { Protected } from "@/components/auth/protected";
 
-interface AssignmentActionsProps {
-  assignment: WindowServiceAssignment;
+import OperatorAssignmentEditDialog from "./operator-assignment-edit-dialog";
+import { OperatorAssignmentDeleteDialog } from "./operator-assignment-delete-dialog";
+
+interface OperatorAssignmentActionsProps {
+  assignment: OperatorAssignment;
 }
 
-export function AssignmentActions({ assignment }: AssignmentActionsProps) {
+export function OperatorAssignmentActions({ assignment }: OperatorAssignmentActionsProps) {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
@@ -63,13 +64,13 @@ export function AssignmentActions({ assignment }: AssignmentActionsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AssignmentEditDialog
+      <OperatorAssignmentEditDialog
         assignment={assignment}
         open={openEditDialog}
         onOpenChange={setOpenEditDialog}
       />
 
-      <AssignmentDeleteDialog
+      <OperatorAssignmentDeleteDialog
         assignment={assignment}
         open={openDeleteDialog}
         onOpenChange={setOpenDeleteDialog}

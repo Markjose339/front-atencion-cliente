@@ -6,11 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import {
-  UpdateWindowServiceAssignmentSchema,
-  UpdateWindowServiceAssignmentSchemaType,
+  UpdateOperatorAssignmentSchema,
+  UpdateOperatorAssignmentSchemaType,
 } from "@/lib/schemas/assignment.schema";
-import { useWindowServiceAssignmentsMutation } from "@/hooks/use-assignments";
-import { WindowServiceAssignment } from "@/types/assignment";
+import { useOperatorAssignmentsMutation } from "@/hooks/use-assignments";
+import { OperatorAssignment } from "@/types/assignment";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,21 +31,21 @@ import {
 } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 
-interface AssignmentEditDialogProps {
-  assignment: WindowServiceAssignment;
+interface OperatorAssignmentEditDialogProps {
+  assignment: OperatorAssignment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export default function AssignmentEditDialog({
+export default function OperatorAssignmentEditDialog({
   assignment,
   open,
   onOpenChange,
-}: AssignmentEditDialogProps) {
-  const { update } = useWindowServiceAssignmentsMutation();
+}: OperatorAssignmentEditDialogProps) {
+  const { update } = useOperatorAssignmentsMutation();
 
-  const form = useForm<UpdateWindowServiceAssignmentSchemaType>({
-    resolver: zodResolver(UpdateWindowServiceAssignmentSchema),
+  const form = useForm<UpdateOperatorAssignmentSchemaType>({
+    resolver: zodResolver(UpdateOperatorAssignmentSchema),
     defaultValues: {
       isActive: assignment.isActive,
     },
@@ -57,7 +57,7 @@ export default function AssignmentEditDialog({
     }
   }, [open, assignment.isActive, form]);
 
-  const onSubmit = async (values: UpdateWindowServiceAssignmentSchemaType) => {
+  const onSubmit = async (values: UpdateOperatorAssignmentSchemaType) => {
     toast.promise(update.mutateAsync({ id: assignment.id, values }), {
       loading: "Actualizando asignacion...",
       success: () => {
@@ -72,7 +72,7 @@ export default function AssignmentEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Editar asignacion de servicio</DialogTitle>
+          <DialogTitle>Editar asignacion de operador</DialogTitle>
           <DialogDescription>
             Solo puedes activar o desactivar la asignacion.
           </DialogDescription>
@@ -82,13 +82,13 @@ export default function AssignmentEditDialog({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="rounded-lg border p-3 text-sm">
               <p>
+                <strong>Operador:</strong> {assignment.user.name} ({assignment.user.email})
+              </p>
+              <p>
                 <strong>Sucursal:</strong> {assignment.branch.name}
               </p>
               <p>
                 <strong>Ventanilla:</strong> {assignment.window.name} ({assignment.window.code})
-              </p>
-              <p>
-                <strong>Servicio:</strong> {assignment.service.name} ({assignment.service.code})
               </p>
             </div>
 
@@ -108,7 +108,7 @@ export default function AssignmentEditDialog({
                       <div className="grid gap-1.5 font-normal">
                         <p className="text-sm leading-none font-medium">Asignacion activa</p>
                         <p className="text-muted-foreground text-sm">
-                          Desactiva para que no aparezca disponible en atencion.
+                          Desactiva para impedir que opere en esta ventanilla.
                         </p>
                       </div>
                     </Label>
