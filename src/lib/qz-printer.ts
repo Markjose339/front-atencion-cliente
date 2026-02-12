@@ -85,6 +85,7 @@ export class QZPrinter {
     const ESC = "\x1B";
     const GS = "\x1D";
     const LF = "\n";
+    const packageCode = ticket.packageCode ?? "SIN CODIGO";
 
     const utcDate = new Date(ticket.createdAt);
     const boliviaTime = new Date(utcDate.getTime() + 4 * 60 * 60 * 1000);
@@ -109,7 +110,7 @@ export class QZPrinter {
       ticket.code + LF,
       ESC + "E" + "\x00" + GS + "!" + "\x00",
       LF,
-      "Paquete: " + ticket.packageCode + LF,
+      "Paquete: " + packageCode + LF,
       `Fecha: ${fecha}  Hora: ${hora}` + LF,
       LF,
       "Espere su turno - Gracias por su paciencia" + LF,

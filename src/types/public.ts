@@ -11,7 +11,7 @@ export type PublicService = {
   serviceCode: string
 }
 
-export type PublicDefaultWindow = {
-  windowId: string
-  windowName: string
+export type PublicQueueJoinPayload = {
+  branchId: string
+  serviceId: string
 }

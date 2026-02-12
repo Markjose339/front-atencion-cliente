@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/contexts/auth-context";
+import { ensureOperatorQueueRegistration } from "@/lib/socket";
 import { useSocket } from "@/hooks/use-socket";
 import { api } from "@/lib/api";
 import {
@@ -176,6 +177,25 @@ export function useCustomerServiceQuery({
     staleTime: 30_000,
     refetchInterval: 10_000,
   });
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    const registerOperatorRooms = () => {
+      ensureOperatorQueueRegistration(socket).catch((e) => {
+        console.error("❌ queue:register failed", e);
+      });
+    };
+
+    registerOperatorRooms();
+    socket.on("connect", registerOperatorRooms);
+
+    return () => {
+      socket.off("connect", registerOperatorRooms);
+    };
+  }, [socket]);
 
   useEffect(() => {
     if (!socket) {

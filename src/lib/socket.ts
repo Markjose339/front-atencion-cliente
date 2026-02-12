@@ -1,45 +1,212 @@
-// lib/socket.ts
-import { io, Socket } from 'socket.io-client';
+﻿import { PublicQueueJoinPayload } from "@/types/public";
+import { io, Socket } from "socket.io-client";
+
+type QueueRegisterAck = {
+  ok: boolean;
+  rooms?: string[];
+  message?: string;
+};
+
+type PublicJoinAck = {
+  ok: boolean;
+  room?: string;
+  message?: string;
+};
+
+type AuthReadyAck = {
+  ok: true;
+  userId: string;
+};
 
 let socket: Socket | null = null;
+let operatorRoomsRegistered = false;
+
+// ✅ bandera por socket (evita carrera)
+let authReady = false;
+
+const getWsUrl = (): string => {
+  const wsUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!wsUrl) throw new Error("NEXT_PUBLIC_API_URL is not defined");
+  return wsUrl;
+};
+
+const waitForSocketConnection = async (
+  targetSocket: Socket,
+  timeoutMs = 7000,
+): Promise<void> => {
+  if (targetSocket.connected) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const timeoutId = globalThis.setTimeout(() => {
+      cleanup();
+      reject(new Error("No se pudo conectar al websocket"));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      globalThis.clearTimeout(timeoutId);
+      targetSocket.off("connect", onConnect);
+      targetSocket.off("connect_error", onConnectError);
+    };
+
+    const onConnect = () => {
+      cleanup();
+      resolve();
+    };
+
+    const onConnectError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    targetSocket.on("connect", onConnect);
+    targetSocket.on("connect_error", onConnectError);
+    targetSocket.connect();
+  });
+};
+
+const waitForAuthReady = async (
+  targetSocket: Socket,
+  timeoutMs = 3000,
+): Promise<void> => {
+  if (authReady) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const timeoutId = globalThis.setTimeout(() => {
+      cleanup();
+      reject(new Error("Timeout esperando auth:ready"));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      globalThis.clearTimeout(timeoutId);
+      targetSocket.off("auth:ready", onReady);
+    };
+
+    const onReady = (_payload: AuthReadyAck) => {
+      authReady = true;
+      cleanup();
+      resolve();
+    };
+
+    targetSocket.on("auth:ready", onReady);
+  });
+};
+
+const emitWithAck = <TAck>(
+  targetSocket: Socket,
+  event: string,
+  payload?: unknown,
+  timeoutMs = 7000,
+): Promise<TAck> => {
+  return new Promise<TAck>((resolve, reject) => {
+    const timeoutId = globalThis.setTimeout(() => {
+      reject(new Error(`Timeout esperando respuesta para ${event}`));
+    }, timeoutMs);
+
+    const onAck = (response: TAck) => {
+      globalThis.clearTimeout(timeoutId);
+      resolve(response);
+    };
+
+    if (payload === undefined) {
+      targetSocket.emit(event, onAck);
+      return;
+    }
+
+    targetSocket.emit(event, payload, onAck);
+  });
+};
 
 export function getSocket(): Socket {
   if (!socket) {
-    const wsUrl = process.env.NEXT_PUBLIC_API_URL;
-    console.log('🔌 Intentando conectar a:', wsUrl); 
-    
-    socket = io(wsUrl, {
-      transports: ['websocket', 'polling'], 
+    socket = io(getWsUrl(), {
+      transports: ["websocket", "polling"],
+      withCredentials: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
-      timeout: 10000, 
+      timeout: 10000,
     });
 
-    socket.on('connect', () => {
-      console.log('✅ Socket conectado:', socket?.id);
+    const resetFlags = () => {
+      operatorRoomsRegistered = false;
+      authReady = false;
+    };
 
-      socket?.emit('join:tickets');
-      console.log('📍 Solicitando unión al room tickets');
-    });
+    socket.on("connect", resetFlags);
+    socket.on("disconnect", resetFlags);
+    socket.on("connect_error", resetFlags);
 
-    socket.on('disconnect', () => {
-      console.log('❌ Socket desconectado');
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('❌ Error de conexión:', error.message);
-      console.error('URL intentada:', wsUrl);
+    // ✅ cuando el backend diga listo, marcamos
+    socket.on("auth:ready", () => {
+      authReady = true;
     });
   }
 
   return socket;
 }
 
-export function disconnectSocket() {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
+export async function ensureOperatorQueueRegistration(
+  targetSocket: Socket = getSocket(),
+): Promise<string[]> {
+  await waitForSocketConnection(targetSocket);
+
+  if (operatorRoomsRegistered) return [];
+
+  // ✅ ESPERA A QUE EL BACKEND TERMINE AUTH
+  await waitForAuthReady(targetSocket).catch(() => undefined);
+
+  const response = await emitWithAck<QueueRegisterAck>(
+    targetSocket,
+    "queue:register",
+  );
+
+  // ✅ si por alguna razón aún cae en carrera, reintenta 1 vez
+  if (!response?.ok && response.message === "No autenticado") {
+    await new Promise((r) => setTimeout(r, 200));
+    const retry = await emitWithAck<QueueRegisterAck>(
+      targetSocket,
+      "queue:register",
+    );
+    if (!retry?.ok) {
+      throw new Error(retry?.message ?? "No se pudo registrar las colas del operador");
+    }
+    operatorRoomsRegistered = true;
+    return retry.rooms ?? [];
   }
+
+  if (!response?.ok) {
+    throw new Error(response?.message ?? "No se pudo registrar las colas del operador");
+  }
+
+  operatorRoomsRegistered = true;
+  return response.rooms ?? [];
+}
+
+export async function joinPublicQueue(
+  payload: PublicQueueJoinPayload,
+  targetSocket: Socket = getSocket(),
+): Promise<string> {
+  await waitForSocketConnection(targetSocket);
+
+  const response = await emitWithAck<PublicJoinAck>(
+    targetSocket,
+    "public:join",
+    payload,
+  );
+
+  if (!response?.ok || !response.room) {
+    throw new Error(response?.message ?? "No se pudo unir a la cola publica");
+  }
+
+  return response.room;
+}
+
+export function disconnectSocket() {
+  if (!socket) return;
+
+  socket.disconnect();
+  socket = null;
+  operatorRoomsRegistered = false;
+  authReady = false;
 }
