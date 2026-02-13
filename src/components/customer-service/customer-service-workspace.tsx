@@ -22,6 +22,11 @@ import { CustomerServiceTable } from "./customer-service-table";
 import { getCustomerServiceErrorText } from "./customer-service-utils";
 import { CustomerServiceWindowSelector } from "./customer-service-window-selector";
 
+type CalledTicketState = {
+  scopeKey: string;
+  ticket: CustomerServiceCalledTicket;
+};
+
 const parsePositiveInt = (value: string | null, fallback: number): number => {
   const parsed = Number(value);
 
@@ -51,10 +56,7 @@ export function CustomerServiceWorkspace() {
     cancelTicket,
   } = useCustomerServiceMutation();
 
-  const [calledTicketState, setCalledTicketState] = useState<{
-    scopeKey: string;
-    ticket: CustomerServiceCalledTicket;
-  } | null>(null);
+  const [calledTicketState, setCalledTicketState] = useState<CalledTicketState | null>(null);
 
   const options = useMemo(() => windowsQuery.data ?? [], [windowsQuery.data]);
 
@@ -143,7 +145,26 @@ export function CustomerServiceWorkspace() {
     [response?.data],
   );
 
+  const backendCalledTicket = useMemo(() => {
+    const ticket = response?.calledTicket;
+
+    if (!ticket || !selectedScopeKey) {
+      return null;
+    }
+
+    const ticketScopeKey = `${ticket.branchId}:${ticket.serviceId}`;
+    if (ticketScopeKey !== selectedScopeKey) {
+      return null;
+    }
+
+    return ticket;
+  }, [response?.calledTicket, selectedScopeKey]);
+
   const calledTicket = useMemo(() => {
+    if (backendCalledTicket) {
+      return backendCalledTicket;
+    }
+
     if (!calledTicketState) {
       return null;
     }
@@ -157,7 +178,7 @@ export function CustomerServiceWorkspace() {
     }
 
     return calledTicketState.ticket;
-  }, [calledTicketState, response?.isAttendingTicket, selectedScopeKey]);
+  }, [backendCalledTicket, calledTicketState, response?.isAttendingTicket, selectedScopeKey]);
 
   const handlePaginationChange = useCallback(
     (pagination: { pageIndex: number; pageSize: number }) => {
@@ -293,7 +314,10 @@ export function CustomerServiceWorkspace() {
 
     toast.promise(finishTicketAttention.mutateAsync(currentAttendingTicket.id), {
       loading: "Finalizando atencion...",
-      success: (data) => data.message,
+      success: (data) => {
+        setCalledTicketState(null);
+        return data.message;
+      },
       error: (error) =>
         getCustomerServiceErrorText(error, "No se pudo finalizar la atencion"),
     });

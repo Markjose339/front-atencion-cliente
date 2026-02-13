@@ -25,6 +25,7 @@ export interface CustomerServiceTicket {
 
 export interface CustomerServiceQueueResponse extends ApiResponse<CustomerServiceTicket> {
   isAttendingTicket: boolean;
+  calledTicket?: CustomerServiceCalledTicket | null;
 }
 
 export interface CustomerServiceCalledTicket {
