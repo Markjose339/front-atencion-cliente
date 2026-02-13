@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Ticket } from "@/types/ticket";
 import { toast } from "sonner";
 
@@ -15,8 +15,13 @@ const getQZPrinter = async () => {
 export function useQZPrinter() {
   const [isConnected, setIsConnected] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const isCheckingRef = useRef(false);
 
   const checkConnection = useCallback(async () => {
+    if (isCheckingRef.current) return;
+
+    isCheckingRef.current = true;
+
     try {
       setIsChecking(true);
       const printer = await getQZPrinter();
@@ -26,6 +31,7 @@ export function useQZPrinter() {
       setIsConnected(false);
     } finally {
       setIsChecking(false);
+      isCheckingRef.current = false;
     }
   }, []);
 
@@ -35,9 +41,6 @@ export function useQZPrinter() {
 
     return () => {
       clearInterval(interval);
-      getQZPrinter()
-        .then((printer) => printer.disconnect())
-        .catch(() => {});
     };
   }, [checkConnection]);
 

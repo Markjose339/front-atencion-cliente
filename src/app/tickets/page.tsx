@@ -1,26 +1,14 @@
-﻿"use client"
+"use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Maximize2, Minimize2, ShieldCheck } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Maximize2, Minimize2 } from "lucide-react"
 
 import { ModeToggle } from "@/components/mode-toggle"
 import { TicketKiosk } from "@/components/tickets/ticket-kiosk"
 import { Button } from "@/components/ui/button"
 
-const formatDateTime = (date: Date): string => {
-  return new Intl.DateTimeFormat("es-BO", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date)
-}
-
 export default function TicketsPage() {
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [now, setNow] = useState(() => new Date())
-
   useEffect(() => {
     const onFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement))
@@ -33,16 +21,6 @@ export default function TicketsPage() {
     }
   }, [])
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setNow(new Date())
-    }, 60_000)
-
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [])
-
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen()
@@ -52,39 +30,22 @@ export default function TicketsPage() {
     await document.exitFullscreen()
   }
 
-  const formattedDate = useMemo(() => formatDateTime(now), [now])
-
   return (
-    <main className="relative isolate h-dvh w-full overflow-hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(14,165,233,0.15),transparent_36%),radial-gradient(circle_at_90%_0%,rgba(100,116,139,0.22),transparent_30%)] dark:bg-[radial-gradient(circle_at_10%_20%,rgba(56,189,248,0.22),transparent_36%),radial-gradient(circle_at_90%_0%,rgba(148,163,184,0.25),transparent_30%),linear-gradient(135deg,#020617_0%,#0f172a_60%,#111827_100%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-20 dark:opacity-35 [background-image:linear-gradient(rgba(148,163,184,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.2)_1px,transparent_1px)] [background-size:40px_40px]" />
+    <main className="relative isolate h-dvh w-full overflow-hidden bg-[#f4f8ff] text-[#0C3E63] dark:bg-[#0C3E63] dark:text-[#e9f2ff]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_6%_8%,rgba(32,83,154,0.24),transparent_36%),radial-gradient(circle_at_94%_4%,rgba(253,203,53,0.28),transparent_33%),linear-gradient(175deg,#f7fbff_0%,#e9f1ff_54%,#fff7db_100%)] dark:bg-[radial-gradient(circle_at_6%_8%,rgba(32,83,154,0.55),transparent_38%),radial-gradient(circle_at_94%_4%,rgba(240,224,73,0.28),transparent_35%),linear-gradient(165deg,#0C3E63_0%,#213661_58%,#0C3E63_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(17,69,145,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(17,69,145,0.16)_1px,transparent_1px)] [background-size:42px_42px] dark:opacity-35 dark:[background-image:linear-gradient(rgba(240,224,73,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(240,224,73,0.14)_1px,transparent_1px)]" />
 
-      <div className="relative z-10 flex h-full flex-col p-4 sm:p-6">
-        <header className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card/85 px-4 py-3 backdrop-blur sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+      <div className="relative z-10 flex h-full flex-col">
+        <div className="flex justify-end p-3 sm:p-5">
+          <div className="flex items-center gap-2 rounded-2xl border border-[#20539A]/45 bg-white/85 px-2 py-1 shadow-[0_20px_32px_-28px_rgba(12,62,99,0.7)] backdrop-blur dark:border-[#5b7da6]/70 dark:bg-[#1b446e]/85 dark:shadow-[0_22px_34px_-26px_rgba(0,0,0,0.8)]">
 
-            <div>
-              <h1 className="text-lg font-semibold text-foreground sm:text-xl">
-                Emision de tickets
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground sm:inline-flex">
-              {formattedDate}
-            </span>
-
-            <ModeToggle />
+            <ModeToggle buttonClassName="h-10 w-10 border-[#20539A]/45 bg-white text-[#114591] hover:border-[#114591] hover:bg-[#e9f1ff] dark:border-[#5e81ab]/70 dark:bg-[#123d64] dark:text-[#deebff] dark:hover:border-[#86a9d9] dark:hover:bg-[#114591]" />
 
             <Button
               type="button"
               variant="outline"
               size="icon"
-              className="border-border bg-card text-foreground hover:bg-accent"
+              className="h-10 w-10 border-[#20539A]/45 bg-white text-[#114591] hover:border-[#114591] hover:bg-[#e9f1ff] dark:border-[#5e81ab]/70 dark:bg-[#123d64] dark:text-[#deebff] dark:hover:border-[#86a9d9] dark:hover:bg-[#114591]"
               onClick={toggleFullscreen}
               title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
             >
@@ -95,9 +56,9 @@ export default function TicketsPage() {
               )}
             </Button>
           </div>
-        </header>
+        </div>
 
-        <section className="min-h-0 flex-1 rounded-[2rem] border border-border/70 bg-card/35 backdrop-blur-sm dark:bg-slate-900/45">
+        <section className="min-h-0 flex-1 px-3 pb-3 sm:px-5 sm:pb-5">
           <TicketKiosk />
         </section>
       </div>

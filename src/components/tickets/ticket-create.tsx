@@ -1,9 +1,8 @@
-﻿"use client"
+"use client"
 
 import { useMemo, useState } from "react"
 import {
   ArrowLeft,
-  Building2,
   CheckCircle2,
   Loader2,
   Package,
@@ -30,7 +29,6 @@ type Step = "service" | "tracking" | "type"
 
 type Props = {
   branchId: string
-  branchName?: string
 }
 
 const STEP_ORDER: Step[] = ["service", "tracking", "type"]
@@ -66,7 +64,7 @@ function StepIndicator({ step, trackingSkipped }: StepIndicatorProps) {
   const currentIndex = STEP_ORDER.indexOf(step)
 
   return (
-    <ol className="grid grid-cols-3 gap-2 rounded-2xl border border-border/80 bg-muted/50 p-2">
+    <ol className="grid grid-cols-1 gap-2 rounded-3xl border-2 border-[#20539A]/30 bg-[linear-gradient(145deg,#ffffff_0%,#eef5ff_100%)] p-2 dark:border-[#4f6f97]/80 dark:bg-[linear-gradient(145deg,#1b3f69_0%,#12385f_100%)] sm:grid-cols-3">
       {STEP_ORDER.map((item, index) => {
         const isActive = item === step
         const isPast = index < currentIndex
@@ -76,11 +74,11 @@ function StepIndicator({ step, trackingSkipped }: StepIndicatorProps) {
           <li
             key={item}
             className={cn(
-              "rounded-xl border px-3 py-2 text-center transition",
-              isActive && "border-sky-400/70 bg-sky-50 text-sky-900 dark:border-sky-700/70 dark:bg-sky-950/40 dark:text-sky-100",
-              isPast && "border-emerald-400/70 bg-emerald-50 text-emerald-900 dark:border-emerald-700/70 dark:bg-emerald-950/35 dark:text-emerald-100",
-              !isActive && !isPast && "border-border bg-card text-muted-foreground",
-              isTrackingAndSkipped && "border-border/70 bg-muted text-muted-foreground/80",
+              "rounded-2xl border px-3 py-2 text-center transition",
+              isActive && "border-[#20539A] bg-[linear-gradient(145deg,#edf4ff_0%,#d6e6ff_100%)] text-[#0C3E63] dark:border-[#6d95cc] dark:bg-[linear-gradient(145deg,#234f83_0%,#20539A_100%)] dark:text-[#f1f7ff]",
+              isPast && "border-[#EECA46] bg-[linear-gradient(145deg,#fff9e9_0%,#F0E049_100%)] text-[#0C3E63] dark:border-[#FDCB35] dark:bg-[linear-gradient(145deg,#35577a_0%,#2b4a6d_100%)] dark:text-[#FDCB35]",
+              !isActive && !isPast && "border-[#20539A]/25 bg-white/80 text-[#20539A] dark:border-[#56769f]/70 dark:bg-[#1f4068]/80 dark:text-[#d8e7ff]",
+              isTrackingAndSkipped && "border-[#20539A]/20 bg-[#eef4ff] text-[#20539A]/70 dark:border-[#4f6e96]/60 dark:bg-[#1a3a60] dark:text-[#bcd0ea]",
             )}
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.09em]">
@@ -96,7 +94,7 @@ function StepIndicator({ step, trackingSkipped }: StepIndicatorProps) {
   )
 }
 
-export function TicketCreate({ branchId, branchName }: Props) {
+export function TicketCreate({ branchId }: Props) {
   const [step, setStep] = useState<Step>("service")
   const [serviceId, setServiceId] = useState("")
   const [wantsCode, setWantsCode] = useState<boolean | null>(null)
@@ -212,39 +210,34 @@ export function TicketCreate({ branchId, branchName }: Props) {
   const currentMeta = STEP_META[step]
 
   return (
-    <main className="h-full w-full overflow-auto px-4 py-5 sm:px-6 sm:py-8">
+    <main className="h-full w-full overflow-auto px-3 py-4 sm:px-6 sm:py-7">
       <div className="mx-auto flex w-full max-w-6xl flex-col">
-        <section className="rounded-[2rem] border border-border/70 bg-card/85 p-5 shadow-[0_24px_90px_-45px_rgba(15,23,42,0.55)] backdrop-blur md:p-8">
-          <header className="mb-6 flex flex-col gap-5 border-b border-border/70 pb-6">
+        <section className="rounded-[2rem] border-2 border-[#20539A]/30 bg-[linear-gradient(145deg,#ffffff_0%,#f1f7ff_46%,#fff7de_100%)] p-5 shadow-[0_26px_44px_-34px_rgba(12,62,99,0.72)] dark:border-[#4e6d96]/80 dark:bg-[linear-gradient(145deg,#17385f_0%,#123a60_56%,#1d355a_100%)] dark:text-[#e9f2ff] dark:shadow-[0_30px_48px_-34px_rgba(0,0,0,0.82)] md:p-8">
+          <header className="mb-6 flex flex-col gap-5 border-b border-[#20539A]/20 pb-6 dark:border-[#5c7ea7]/45">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#114591] text-[#F0E049] shadow-[0_12px_22px_-14px_rgba(12,62,99,0.9)] dark:bg-[#FDCB35] dark:text-[#0C3E63]">
                   <Ticket className="h-6 w-6" />
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary">
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#114591] dark:text-[#FDCB35]">
                     {currentMeta.label}
                   </p>
-                  <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+                  <h1 className="text-2xl font-bold text-[#0C3E63] dark:text-[#edf5ff] sm:text-3xl">
                     {currentMeta.title}
                   </h1>
                 </div>
-              </div>
-
-              <div className="hidden items-center gap-2 rounded-full border border-border bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground sm:inline-flex">
-                <Building2 className="h-4 w-4" />
-                {branchName ?? "Sucursal activa"}
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium",
+                  "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold",
                   isPrinterConnected
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-                    : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-200",
+                    ? "border-[#20539A]/45 bg-[#edf4ff] text-[#114591] dark:border-[#6a92c7]/60 dark:bg-[#1f446f] dark:text-[#e5f0ff]"
+                    : "border-[#D38E2A]/55 bg-[#fff4df] text-[#D38E2A] dark:border-[#EECA46]/55 dark:bg-[#2a3f58] dark:text-[#FDCB35]",
                 )}
               >
                 {isPrinterChecking ? (
@@ -262,16 +255,16 @@ export function TicketCreate({ branchId, branchName }: Props) {
               </span>
             </div>
 
-            <p className="text-sm text-muted-foreground sm:text-base">{currentMeta.subtitle}</p>
+            <p className="text-sm text-[#20539A] dark:text-[#cfdef6] sm:text-base">{currentMeta.subtitle}</p>
 
             <StepIndicator step={step} trackingSkipped={trackingSkipped} />
 
             {selectedService ? (
               <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-                <span className="rounded-full border border-border bg-muted px-3 py-1 font-medium text-foreground">
+                <span className="rounded-full border border-[#20539A]/35 bg-white px-3 py-1 font-semibold text-[#114591] dark:border-[#6488b8]/60 dark:bg-[#17416b]/80 dark:text-[#e6f1ff]">
                   Servicio: {selectedService.serviceName}
                 </span>
-                <span className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 font-medium text-sky-700 dark:border-sky-800 dark:bg-sky-950/35 dark:text-sky-200">
+                <span className="rounded-full border border-[#D38E2A]/45 bg-[#fff5e0] px-3 py-1 font-semibold text-[#D38E2A] dark:border-[#EECA46]/55 dark:bg-[#2b415a] dark:text-[#FDCB35]">
                   Codigo: {selectedService.abbreviation}
                 </span>
               </div>
@@ -285,7 +278,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                   {Array.from({ length: 4 }).map((_, idx) => (
                     <div
                       key={idx}
-                      className="h-30 animate-pulse rounded-3xl border border-border bg-muted"
+                      className="h-32 animate-pulse rounded-3xl border border-[#20539A]/25 bg-[#edf3ff] dark:border-[#54759e]/65 dark:bg-[#1e4068]"
                     />
                   ))}
                 </div>
@@ -309,7 +302,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                   })}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-dashed border-[#20539A]/35 bg-white/80 p-8 text-center text-sm text-[#20539A] dark:border-[#54769f]/65 dark:bg-[#1e4068]/65 dark:text-[#d2e1f8]">
                   No hay servicios habilitados para esta sucursal.
                 </div>
               )}
@@ -341,8 +334,8 @@ export function TicketCreate({ branchId, branchName }: Props) {
                   />
                 </div>
               ) : (
-                <div className="rounded-3xl border border-border bg-muted/50 p-5 sm:p-6">
-                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="rounded-3xl border-2 border-[#20539A]/30 bg-[linear-gradient(145deg,#ffffff_0%,#edf5ff_100%)] p-5 dark:border-[#54779f]/70 dark:bg-[linear-gradient(145deg,#22466f_0%,#183e65_100%)] sm:p-6">
+                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#114591] dark:text-[#deebff]">
                     <Package className="h-4 w-4" />
                     Codigo de rastreo
                   </label>
@@ -351,12 +344,12 @@ export function TicketCreate({ branchId, branchName }: Props) {
                     value={packageCode}
                     onChange={(event) => setPackageCode(event.target.value.toUpperCase())}
                     placeholder="Ej: EN000001LP"
-                    className="h-12 rounded-xl border-input bg-background font-mono text-base"
+                    className="h-12 rounded-xl border-[#20539A]/35 bg-white font-mono text-base text-[#0C3E63] placeholder:text-[#20539A]/70 dark:border-[#5a7da6]/70 dark:bg-[#153a61] dark:text-[#edf5ff] dark:placeholder:text-[#adc3e2]"
                     disabled={loading}
                     maxLength={25}
                   />
 
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="mt-2 text-xs text-[#20539A] dark:text-[#c7d9f3]">
                     Solo letras, numeros y guiones.
                   </p>
                 </div>
@@ -366,7 +359,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl border-[#20539A]/45 bg-white px-5 text-[#114591] hover:border-[#114591] hover:bg-[#e8f0ff] dark:border-[#5b7da6]/70 dark:bg-[#1f446e] dark:text-[#e8f1ff] dark:hover:border-[#86a8d8] dark:hover:bg-[#1a3d62]"
                   onClick={goBack}
                   disabled={loading}
                 >
@@ -377,7 +370,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 {wantsCode === true ? (
                   <Button
                     type="button"
-                    className="h-11 rounded-xl px-6"
+                    className="h-11 rounded-xl bg-[#114591] px-6 text-white hover:bg-[#0C3E63] dark:bg-[#FDCB35] dark:text-[#0C3E63] dark:hover:bg-[#F0E049]"
                     onClick={handleContinueWithCode}
                     disabled={loading}
                   >
@@ -416,7 +409,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl border-[#20539A]/45 bg-white px-5 text-[#114591] hover:border-[#114591] hover:bg-[#e8f0ff] dark:border-[#5b7da6]/70 dark:bg-[#1f446e] dark:text-[#e8f1ff] dark:hover:border-[#86a8d8] dark:hover:bg-[#1a3d62]"
                   onClick={goBack}
                   disabled={loading}
                 >
@@ -425,7 +418,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 </Button>
 
                 {loading ? (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#20539A]/35 bg-white px-4 py-2 text-sm font-medium text-[#20539A] dark:border-[#5c7ea7]/65 dark:bg-[#1e446f] dark:text-[#ddeaff]">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Generando e imprimiendo ticket...
                   </div>

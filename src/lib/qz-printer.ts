@@ -5,47 +5,89 @@ import { Ticket } from "@/types/ticket";
 
 export class QZPrinter {
   private static instance: QZPrinter;
-  private connected = false;
-
   private static readonly PRINTER_NAME = "EPSON TM-T20II Receipt";
 
-  private constructor() { }
+  private connected = false;
+  private operationQueue: Promise<void> = Promise.resolve();
+
+  private constructor() {}
 
   static getInstance(): QZPrinter {
     if (!QZPrinter.instance) {
       QZPrinter.instance = new QZPrinter();
     }
+
     return QZPrinter.instance;
   }
 
-  async connect(): Promise<void> {
-    if (this.connected && qz.websocket.isActive()) return;
+  private enqueueOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const nextOperation = this.operationQueue.then(operation, operation);
 
-    try {
-      if (!qz.websocket.isActive()) {
-        await qz.websocket.connect();
-      }
+    this.operationQueue = nextOperation.then(
+      () => undefined,
+      () => undefined
+    );
 
-      const printer = await this.getPrinter();
-      console.log("🖨️ Usando impresora:", printer);
+    return nextOperation;
+  }
 
-      this.connected = true;
-    } catch (error) {
-      console.error("❌ Error conectando QZ Tray:", error);
-      throw new Error(
-        "No se pudo conectar a QZ Tray. Verifica que esté instalado y ejecutándose."
+  private mapConnectionError(error: unknown): Error {
+    if (!(error instanceof Error)) {
+      return new Error(
+        "No se pudo conectar a QZ Tray. Verifica que este instalado y ejecutandose."
       );
     }
+
+    const normalized = error.message.toLowerCase();
+
+    if (normalized.includes("cancelled by user")) {
+      return new Error("La conexion con QZ Tray fue cancelada por el usuario.");
+    }
+
+    if (
+      normalized.includes("waiting for previous disconnect request to complete")
+    ) {
+      return new Error(
+        "QZ Tray aun esta cerrando la conexion anterior. Intente nuevamente."
+      );
+    }
+
+    if (
+      normalized.includes("no esta disponible") ||
+      normalized.includes("not available")
+    ) {
+      return error;
+    }
+
+    return new Error(
+      "No se pudo conectar a QZ Tray. Verifica que este instalado y ejecutandose."
+    );
+  }
+
+  async connect(): Promise<void> {
+    return this.enqueueOperation(async () => {
+      if (this.connected && qz.websocket.isActive()) {
+        return;
+      }
+
+      try {
+        if (!qz.websocket.isActive()) {
+          await qz.websocket.connect();
+        }
+
+        await this.getPrinter();
+        this.connected = true;
+      } catch (error) {
+        this.connected = false;
+        throw this.mapConnectionError(error);
+      }
+    });
   }
 
   private async getPrinter(): Promise<string> {
     const result = await qz.printers.find();
 
-    const printers: string[] = Array.isArray(result)
-      ? result
-      : [result];
-
-    console.log("🖨️ Impresoras disponibles:", printers);
+    const printers: string[] = Array.isArray(result) ? result : [result];
 
     const printer = printers.find(
       (name) => name === QZPrinter.PRINTER_NAME
@@ -53,7 +95,7 @@ export class QZPrinter {
 
     if (!printer) {
       throw new Error(
-        `La impresora "${QZPrinter.PRINTER_NAME}" no está disponible`
+        `La impresora "${QZPrinter.PRINTER_NAME}" no esta disponible`
       );
     }
 
@@ -72,12 +114,12 @@ export class QZPrinter {
 
     try {
       await qz.print(config, data);
-      console.log("✅ Ticket impreso:", ticket.code);
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(`Error de impresión: ${error.message}`);
+        throw new Error(`Error de impresion: ${error.message}`);
       }
-      throw new Error("Error de impresión desconocido");
+
+      throw new Error("Error de impresion desconocido");
     }
   }
 
@@ -85,7 +127,8 @@ export class QZPrinter {
     const ESC = "\x1B";
     const GS = "\x1D";
     const LF = "\n";
-    const packageCode = ticket.packageCode ?? "SIN CODIGO";
+    const packageCode = ticket.packageCode?.trim() ?? "";
+    const hasPackageCode = packageCode.length > 0;
 
     const date = new Date(ticket.createdAt);
 
@@ -107,7 +150,7 @@ export class QZPrinter {
       ticket.code + LF,
       ESC + "E" + "\x00" + GS + "!" + "\x00",
       LF,
-      "Paquete: " + packageCode + LF,
+      ...(hasPackageCode ? ["Paquete: " + packageCode + LF] : []),
       `Fecha/Hora: ${fechaHora}` + LF,
       LF,
       "Espere su turno - Gracias por su paciencia" + LF,
@@ -116,12 +159,14 @@ export class QZPrinter {
     ];
   }
 
-
   async disconnect(): Promise<void> {
-    if (qz.websocket.isActive()) {
-      await qz.websocket.disconnect();
+    return this.enqueueOperation(async () => {
+      if (qz.websocket.isActive()) {
+        await qz.websocket.disconnect();
+      }
+
       this.connected = false;
-    }
+    });
   }
 
   isConnected(): boolean {

@@ -1,7 +1,7 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Building2, Clock3, Landmark, RotateCcw } from "lucide-react"
+import { Building2, Landmark, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 
 import { ChoiceCard } from "@/components/tickets/choice-card"
@@ -11,14 +11,9 @@ import { useKioskBranch, usePublicBranches } from "@/hooks/use-public"
 
 const IDLE_RESET_MS = 2 * 60 * 1000
 
-const formatIdleMinutes = (ms: number): string => {
-  const minutes = Math.round(ms / 60_000)
-  return `${minutes} min`
-}
-
 export default function TicketKioskClient() {
   const { data: branches, isLoading: loadingBranches } = usePublicBranches()
-  const { branchId, selectedBranch, selectBranch, resetBranch } = useKioskBranch(branches)
+  const { branchId, selectBranch, resetBranch } = useKioskBranch(branches)
 
   const [sessionKey, setSessionKey] = useState(0)
   const view = useMemo<"setup" | "tickets">(() => (branchId ? "tickets" : "setup"), [branchId])
@@ -72,47 +67,22 @@ export default function TicketKioskClient() {
 
   if (view === "tickets") {
     return (
-      <div className="relative h-full w-full">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.12),transparent_38%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.14),transparent_35%)] dark:bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.18),transparent_38%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.22),transparent_35%)]" />
+      <div className="relative h-full w-full overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(17,69,145,0.2),transparent_38%),radial-gradient(circle_at_88%_2%,rgba(253,203,53,0.2),transparent_32%)] dark:bg-[radial-gradient(circle_at_12%_12%,rgba(32,83,154,0.35),transparent_38%),radial-gradient(circle_at_88%_2%,rgba(240,224,73,0.15),transparent_35%)]" />
 
-        <div className="relative z-10 flex h-full flex-col px-4 pb-4 pt-2 sm:px-6 sm:pb-6 sm:pt-4">
-          <header className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/85 px-4 py-3 shadow-[0_14px_35px_-25px_rgba(15,23,42,0.75)] backdrop-blur sm:px-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Kiosco de tickets
-              </p>
-              <p className="text-base font-semibold text-foreground sm:text-lg">
-                {selectedBranch?.name ?? "Sucursal seleccionada"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {selectedBranch?.departmentName ?? "Atencion al cliente"}
-              </p>
-            </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="fixed left-3 top-3 z-20 h-10 rounded-xl border-[#20539A]/45 bg-white px-4 text-[#114591] shadow-[0_20px_32px_-28px_rgba(12,62,99,0.7)] backdrop-blur hover:border-[#114591] hover:bg-[#e8f0ff] sm:left-5 sm:top-5 dark:border-[#5f82ac]/70 dark:bg-[#123d64] dark:text-[#dce9ff] dark:hover:border-[#87aadc] dark:hover:bg-[#114591]"
+          onClick={onResetBranch}
+        >
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Cambiar sucursal
+        </Button>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                <Clock3 className="h-3.5 w-3.5" />
-                Reinicio por inactividad: {formatIdleMinutes(IDLE_RESET_MS)}
-              </span>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 rounded-xl"
-                onClick={onResetBranch}
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Cambiar sucursal
-              </Button>
-            </div>
-          </header>
-
+        <div className="relative z-10 flex h-full flex-col px-3 pb-3 pt-2 sm:px-5 sm:pb-5 sm:pt-4">
           <div className="min-h-0 flex-1">
-            <TicketCreate
-              key={sessionKey}
-              branchId={branchId}
-              branchName={selectedBranch?.name}
-            />
+            <TicketCreate key={sessionKey} branchId={branchId} />
           </div>
         </div>
       </div>
@@ -120,18 +90,18 @@ export default function TicketKioskClient() {
   }
 
   return (
-    <main className="h-full w-full overflow-auto px-4 py-6 sm:px-6 sm:py-10">
-      <div className="mx-auto w-full max-w-6xl rounded-[2rem] border border-border/70 bg-card/85 p-6 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.65)] backdrop-blur sm:p-8">
-        <header className="mb-6 border-b border-border pb-6 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <Landmark className="h-7 w-7" />
+    <main className="h-full w-full overflow-auto px-4 py-6 sm:px-6 sm:py-9">
+      <div className="mx-auto w-full max-w-6xl rounded-[2.1rem] border-2 border-[#20539A]/35 bg-[linear-gradient(145deg,#ffffff_0%,#f1f7ff_48%,#fff5d5_100%)] p-6 shadow-[0_30px_52px_-34px_rgba(12,62,99,0.65)] dark:border-[#EECA46]/45 dark:bg-[linear-gradient(145deg,#14345c_0%,#0C3E63_54%,#213661_100%)] dark:shadow-[0_32px_54px_-34px_rgba(0,0,0,0.82)] sm:p-8">
+        <header className="mb-6 border-b border-[#20539A]/25 pb-6 text-center dark:border-[#EECA46]/35">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#114591] text-[#F0E049] shadow-[0_14px_28px_-18px_rgba(12,62,99,0.95)] dark:bg-[#FDCB35] dark:text-[#0C3E63]">
+            <Landmark className="h-8 w-8" />
           </div>
 
-          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+          <h1 className="text-2xl font-bold text-[#0C3E63] dark:text-[#F0E049] sm:text-3xl">
             Configuracion inicial del kiosco
           </h1>
 
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-[#20539A] dark:text-[#FDCB35] sm:text-base">
             Seleccione la sucursal para habilitar la emision de tickets. Esta configuracion
             queda guardada localmente en el equipo.
           </p>
@@ -154,11 +124,11 @@ export default function TicketKioskClient() {
           </div>
 
           {loadingBranches ? (
-            <p className="text-center text-sm text-muted-foreground">Cargando sucursales...</p>
+            <p className="text-center text-sm text-[#20539A] dark:text-[#FDCB35]">Cargando sucursales...</p>
           ) : null}
 
           {!loadingBranches && (branches?.length ?? 0) === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-[#20539A]/35 bg-white/70 p-8 text-center text-sm text-[#20539A] dark:border-[#EECA46]/45 dark:bg-[#213661]/50 dark:text-[#FDCB35]">
               No hay sucursales activas disponibles para este kiosco.
             </div>
           ) : null}
