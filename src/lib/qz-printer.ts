@@ -87,20 +87,17 @@ export class QZPrinter {
     const LF = "\n";
     const packageCode = ticket.packageCode ?? "SIN CODIGO";
 
-    const utcDate = new Date(ticket.createdAt);
-    const boliviaTime = new Date(utcDate.getTime() + 4 * 60 * 60 * 1000);
+    const date = new Date(ticket.createdAt);
 
-    const fecha = boliviaTime.toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
+    const fechaHora = new Intl.DateTimeFormat("es-BO", {
       year: "numeric",
-    });
-
-    const hora = boliviaTime.toLocaleTimeString("es-ES", {
+      month: "short",
+      day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    });
+      timeZone: "America/La_Paz",
+    }).format(date);
 
     return [
       ESC + "@" + ESC + "a1" + ESC + "M" + "\x00" + GS + "!" + "\x00",
@@ -111,13 +108,14 @@ export class QZPrinter {
       ESC + "E" + "\x00" + GS + "!" + "\x00",
       LF,
       "Paquete: " + packageCode + LF,
-      `Fecha: ${fecha}  Hora: ${hora}` + LF,
+      `Fecha/Hora: ${fechaHora}` + LF,
       LF,
       "Espere su turno - Gracias por su paciencia" + LF,
       LF,
       ESC + "d" + "\x02" + GS + "V" + "\x01",
     ];
   }
+
 
   async disconnect(): Promise<void> {
     if (qz.websocket.isActive()) {

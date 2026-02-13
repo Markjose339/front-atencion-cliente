@@ -1,15 +1,25 @@
-export const formatCustomerServiceDate = (value: string | null): string => {
+export const formatCustomerServiceDate = (
+  value: string | null,
+): string => {
   if (!value) {
     return "-";
   }
 
-  return new Date(value).toLocaleString("es-BO", {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("es-BO", {
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  });
+    hour12: false,
+    timeZone: "America/La_Paz",
+  }).format(date);
 };
 
 export const getCustomerServiceErrorText = (

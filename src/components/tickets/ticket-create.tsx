@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Loader2,
   Package,
+  PrinterCheck,
+  PrinterX,
   ShieldCheck,
   Star,
   Ticket,
@@ -18,6 +20,7 @@ import { ChoiceCard } from "@/components/tickets/choice-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { usePublicServicesByBranch } from "@/hooks/use-public"
+import { useQZPrinter } from "@/hooks/use-qz-printer"
 import { useTicketsMutation } from "@/hooks/use-tickets"
 import { cn } from "@/lib/utils"
 import { PublicService } from "@/types/public"
@@ -63,7 +66,7 @@ function StepIndicator({ step, trackingSkipped }: StepIndicatorProps) {
   const currentIndex = STEP_ORDER.indexOf(step)
 
   return (
-    <ol className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-2">
+    <ol className="grid grid-cols-3 gap-2 rounded-2xl border border-border/80 bg-muted/50 p-2">
       {STEP_ORDER.map((item, index) => {
         const isActive = item === step
         const isPast = index < currentIndex
@@ -74,10 +77,10 @@ function StepIndicator({ step, trackingSkipped }: StepIndicatorProps) {
             key={item}
             className={cn(
               "rounded-xl border px-3 py-2 text-center transition",
-              isActive && "border-sky-300 bg-sky-50 text-sky-900",
-              isPast && "border-emerald-200 bg-emerald-50 text-emerald-900",
-              !isActive && !isPast && "border-slate-200 bg-white text-slate-500",
-              isTrackingAndSkipped && "border-slate-200 bg-slate-100 text-slate-400",
+              isActive && "border-sky-400/70 bg-sky-50 text-sky-900 dark:border-sky-700/70 dark:bg-sky-950/40 dark:text-sky-100",
+              isPast && "border-emerald-400/70 bg-emerald-50 text-emerald-900 dark:border-emerald-700/70 dark:bg-emerald-950/35 dark:text-emerald-100",
+              !isActive && !isPast && "border-border bg-card text-muted-foreground",
+              isTrackingAndSkipped && "border-border/70 bg-muted text-muted-foreground/80",
             )}
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.09em]">
@@ -100,9 +103,13 @@ export function TicketCreate({ branchId, branchName }: Props) {
   const [packageCode, setPackageCode] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const { data: services, isLoading: loadingServices } =
-    usePublicServicesByBranch(branchId)
+  const { data: services, isLoading: loadingServices } = usePublicServicesByBranch(branchId)
   const { create } = useTicketsMutation()
+  const {
+    printTicket,
+    isConnected: isPrinterConnected,
+    isChecking: isPrinterChecking,
+  } = useQZPrinter()
 
   const availableServices = useMemo(() => {
     return [...(services ?? [])].sort((a, b) =>
@@ -168,7 +175,15 @@ export function TicketCreate({ branchId, branchName }: Props) {
         packageCode: admission ? null : wantsCode ? packageCode : null,
       })
 
-      toast.success(`Ticket ${ticket.code} generado correctamente`)
+      const printed = await printTicket(ticket)
+
+      if (printed) {
+        toast.success(`Ticket ${ticket.code} generado e impreso`)
+      } else {
+        toast.success(`Ticket ${ticket.code} generado`)
+        toast.message("No se pudo imprimir automaticamente. Verifique QZ Tray y la impresora.")
+      }
+
       reset()
     } catch (error) {
       const message =
@@ -199,40 +214,64 @@ export function TicketCreate({ branchId, branchName }: Props) {
   return (
     <main className="h-full w-full overflow-auto px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col">
-        <section className="rounded-[2rem] border border-slate-200/70 bg-white/88 p-5 shadow-[0_24px_90px_-45px_rgba(15,23,42,0.55)] backdrop-blur md:p-8">
-          <header className="mb-6 flex flex-col gap-5 border-b border-slate-200/80 pb-6">
+        <section className="rounded-[2rem] border border-border/70 bg-card/85 p-5 shadow-[0_24px_90px_-45px_rgba(15,23,42,0.55)] backdrop-blur md:p-8">
+          <header className="mb-6 flex flex-col gap-5 border-b border-border/70 pb-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
                   <Ticket className="h-6 w-6" />
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-sky-700">
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary">
                     {currentMeta.label}
                   </p>
-                  <h1 className="text-2xl font-semibold text-slate-950 sm:text-3xl">
+                  <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
                     {currentMeta.title}
                   </h1>
                 </div>
               </div>
 
-              <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-xs font-medium text-slate-600 sm:inline-flex">
-                <Building2 className="h-4 w-4 text-slate-500" />
+              <div className="hidden items-center gap-2 rounded-full border border-border bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground sm:inline-flex">
+                <Building2 className="h-4 w-4" />
                 {branchName ?? "Sucursal activa"}
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 sm:text-base">{currentMeta.subtitle}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium",
+                  isPrinterConnected
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                    : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-200",
+                )}
+              >
+                {isPrinterChecking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : isPrinterConnected ? (
+                  <PrinterCheck className="h-3.5 w-3.5" />
+                ) : (
+                  <PrinterX className="h-3.5 w-3.5" />
+                )}
+                {isPrinterChecking
+                  ? "Verificando impresora..."
+                  : isPrinterConnected
+                    ? "Impresora lista"
+                    : "Impresora no detectada"}
+              </span>
+            </div>
+
+            <p className="text-sm text-muted-foreground sm:text-base">{currentMeta.subtitle}</p>
 
             <StepIndicator step={step} trackingSkipped={trackingSkipped} />
 
             {selectedService ? (
               <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-                <span className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 font-medium text-slate-700">
+                <span className="rounded-full border border-border bg-muted px-3 py-1 font-medium text-foreground">
                   Servicio: {selectedService.serviceName}
                 </span>
-                <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 font-medium text-sky-700">
+                <span className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 font-medium text-sky-700 dark:border-sky-800 dark:bg-sky-950/35 dark:text-sky-200">
                   Codigo: {selectedService.abbreviation}
                 </span>
               </div>
@@ -246,7 +285,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                   {Array.from({ length: 4 }).map((_, idx) => (
                     <div
                       key={idx}
-                      className="h-30 animate-pulse rounded-3xl border border-slate-200 bg-slate-100"
+                      className="h-30 animate-pulse rounded-3xl border border-border bg-muted"
                     />
                   ))}
                 </div>
@@ -270,7 +309,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                   })}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600">
+                <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center text-sm text-muted-foreground">
                   No hay servicios habilitados para esta sucursal.
                 </div>
               )}
@@ -302,8 +341,8 @@ export function TicketCreate({ branchId, branchName }: Props) {
                   />
                 </div>
               ) : (
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
-                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <div className="rounded-3xl border border-border bg-muted/50 p-5 sm:p-6">
+                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Package className="h-4 w-4" />
                     Codigo de rastreo
                   </label>
@@ -312,12 +351,12 @@ export function TicketCreate({ branchId, branchName }: Props) {
                     value={packageCode}
                     onChange={(event) => setPackageCode(event.target.value.toUpperCase())}
                     placeholder="Ej: EN000001LP"
-                    className="h-12 rounded-xl border-slate-300 bg-white font-mono text-base"
+                    className="h-12 rounded-xl border-input bg-background font-mono text-base"
                     disabled={loading}
                     maxLength={25}
                   />
 
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     Solo letras, numeros y guiones.
                   </p>
                 </div>
@@ -327,7 +366,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-xl border-slate-300 bg-white"
+                  className="h-11 rounded-xl"
                   onClick={goBack}
                   disabled={loading}
                 >
@@ -338,7 +377,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 {wantsCode === true ? (
                   <Button
                     type="button"
-                    className="h-11 rounded-xl bg-slate-900 px-6 text-white hover:bg-slate-800"
+                    className="h-11 rounded-xl px-6"
                     onClick={handleContinueWithCode}
                     disabled={loading}
                   >
@@ -377,7 +416,7 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-xl border-slate-300 bg-white"
+                  className="h-11 rounded-xl"
                   onClick={goBack}
                   disabled={loading}
                 >
@@ -386,9 +425,9 @@ export function TicketCreate({ branchId, branchName }: Props) {
                 </Button>
 
                 {loading ? (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Generando ticket...
+                    Generando e imprimiendo ticket...
                   </div>
                 ) : null}
               </div>
