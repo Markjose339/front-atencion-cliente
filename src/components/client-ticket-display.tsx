@@ -7,9 +7,14 @@ import { Card } from "@/components/ui/card"
 interface ClientTicketDisplayProps {
   code: string
   window: string
+  serviceName?: string
 }
 
-export function ClientTicketDisplay({ code, window }: ClientTicketDisplayProps) {
+export function ClientTicketDisplay({ code, window, serviceName }: ClientTicketDisplayProps) {
+  const windowLabel = window.toLowerCase().includes("ventanilla")
+    ? window
+    : `Ventanilla ${window}`
+
   return (
     <Card className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.75)] transition-transform duration-200 hover:-translate-y-0.5">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500 via-cyan-400 to-slate-900" />
@@ -34,8 +39,14 @@ export function ClientTicketDisplay({ code, window }: ClientTicketDisplayProps) 
 
         <div className="flex items-center justify-center gap-2 rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-2">
           <Building2 className="h-4 w-4 text-sky-700" />
-          <p className="text-sm font-semibold text-sky-900">Ventanilla {window}</p>
+          <p className="text-sm font-semibold text-sky-900">{windowLabel}</p>
         </div>
+
+        {serviceName ? (
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+            Tipo {serviceName}
+          </p>
+        ) : null}
       </div>
     </Card>
   )

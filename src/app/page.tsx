@@ -1,53 +1,141 @@
-﻿"use client"
+"use client";
 
-import { Announcements } from "@/components/announcements"
-import { ClientTicketDisplay } from "@/components/client-ticket-display"
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
-const attendingTickets = [
-  { id: "1", code: "R0007", window: "1" },
-  { id: "2", code: "P0003", window: "4" },
-  { id: "3", code: "R0012", window: "2" },
-]
+import { PublicDisplayBoard } from "@/components/public-display/public-display-board";
+import { PublicDisplaySetup } from "@/components/public-display/public-display-setup";
+import { usePublicDisplayCalls, usePublicDisplayConfig } from "@/hooks/use-public-display";
+import { usePublicBranches, usePublicServicesByBranch } from "@/hooks/use-public";
+import { useTicketAnnouncer } from "@/hooks/use-ticket-announcer";
+
+const uniqueIds = (values: string[]): string[] =>
+  Array.from(new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)));
 
 export default function Home() {
+  const { data: branches = [], isLoading: loadingBranches } = usePublicBranches();
+  const { config, saveConfig } = usePublicDisplayConfig();
+  const [isEditing, setIsEditing] = useState<boolean>(() => !config);
+
+  const [draftBranchId, setDraftBranchId] = useState<string>(config?.branchId ?? "");
+  const [draftServiceIds, setDraftServiceIds] = useState<string[]>(() =>
+    uniqueIds(config?.serviceIds ?? []),
+  );
+
+  const setupServicesQuery = usePublicServicesByBranch(draftBranchId || null);
+  const displayServicesQuery = usePublicServicesByBranch(config?.branchId ?? null);
+
+  const { isVoiceSupported, voiceEnabled, setVoiceEnabled, announceTicket } =
+    useTicketAnnouncer();
+
+  const displayCalls = usePublicDisplayCalls({
+    branchId: isEditing ? null : (config?.branchId ?? null),
+    serviceIds: isEditing ? [] : (config?.serviceIds ?? []),
+    maxItems: 12,
+    onIncomingCall: announceTicket,
+  });
+
+  const selectedBranch = useMemo(
+    () => branches.find((branch) => branch.id === config?.branchId) ?? null,
+    [branches, config?.branchId],
+  );
+
+  const selectedServiceNames = useMemo(() => {
+    if (!config) {
+      return [];
+    }
+
+    const servicesById = new Map(
+      (displayServicesQuery.data ?? []).map((service) => [service.serviceId, service.serviceName]),
+    );
+
+    return config.serviceIds.map((serviceId) => servicesById.get(serviceId) ?? serviceId);
+  }, [config, displayServicesQuery.data]);
+
+  const handleSelectBranch = (branchId: string) => {
+    setDraftBranchId(branchId);
+    setDraftServiceIds([]);
+  };
+
+  const handleToggleService = (serviceId: string) => {
+    setDraftServiceIds((previous) =>
+      previous.includes(serviceId)
+        ? previous.filter((value) => value !== serviceId)
+        : [...previous, serviceId],
+    );
+  };
+
+  const handleSaveConfiguration = () => {
+    if (!draftBranchId) {
+      toast.error("Seleccione una sucursal");
+      return;
+    }
+
+    const availableServiceIds = new Set(
+      (setupServicesQuery.data ?? []).map((service) => service.serviceId),
+    );
+    const filteredServiceIds = uniqueIds(draftServiceIds).filter((serviceId) =>
+      availableServiceIds.has(serviceId),
+    );
+
+    if (filteredServiceIds.length === 0) {
+      toast.error("Seleccione al menos un servicio");
+      return;
+    }
+
+    saveConfig({
+      branchId: draftBranchId,
+      serviceIds: filteredServiceIds,
+    });
+
+    setIsEditing(false);
+    toast.success("Pantalla configurada correctamente");
+  };
+
+  const handleOpenSettings = () => {
+    setDraftBranchId(config?.branchId ?? "");
+    setDraftServiceIds(uniqueIds(config?.serviceIds ?? []));
+    setIsEditing(true);
+  };
+
+  const handleReload = async () => {
+    await displayCalls.refetch();
+    toast.success("Pantalla actualizada");
+  };
+
+  const handleToggleVoice = () => {
+    setVoiceEnabled(!voiceEnabled);
+  };
+
+  if (isEditing || !config) {
+    return (
+      <PublicDisplaySetup
+        branches={branches}
+        services={setupServicesQuery.data ?? []}
+        loadingBranches={loadingBranches}
+        loadingServices={setupServicesQuery.isLoading}
+        selectedBranchId={draftBranchId}
+        selectedServiceIds={draftServiceIds}
+        onSelectBranch={handleSelectBranch}
+        onToggleService={handleToggleService}
+        onSaveConfiguration={handleSaveConfiguration}
+      />
+    );
+  }
+
   return (
-    <main className="h-dvh w-full overflow-hidden bg-slate-100">
-      <section className="h-3/5 w-full p-4 sm:p-6">
-        <div className="h-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_30px_80px_-60px_rgba(15,23,42,0.85)]">
-          <Announcements />
-        </div>
-      </section>
-
-      <section className="h-2/5 w-full px-4 pb-4 sm:px-6 sm:pb-6">
-        <div className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.85)] sm:px-6">
-          <header className="mb-4 border-b border-slate-200 pb-3">
-            <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
-              Clientes siendo atendidos
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Verifique su ticket y dirijase a la ventanilla indicada.
-            </p>
-          </header>
-
-          <div className="min-h-0 flex-1 overflow-auto">
-            {attendingTickets.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {attendingTickets.map((ticket) => (
-                  <ClientTicketDisplay
-                    key={ticket.id}
-                    code={ticket.code}
-                    window={ticket.window}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                No hay clientes siendo atendidos en este momento.
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-    </main>
-  )
+    <PublicDisplayBoard
+      branchName={selectedBranch?.name ?? "Sucursal no disponible"}
+      selectedServiceNames={selectedServiceNames}
+      tickets={displayCalls.tickets}
+      isLoading={displayCalls.isLoading}
+      isFetching={displayCalls.isFetching}
+      errorMessage={displayCalls.error?.message ?? null}
+      isVoiceSupported={isVoiceSupported}
+      voiceEnabled={voiceEnabled}
+      onToggleVoice={handleToggleVoice}
+      onReload={handleReload}
+      onOpenSettings={handleOpenSettings}
+    />
+  );
 }
