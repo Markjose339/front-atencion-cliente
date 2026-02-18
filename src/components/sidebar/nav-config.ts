@@ -4,6 +4,7 @@ import {
   Home,
   LifeBuoy,
   Map,
+  Megaphone,
   MessageSquare,
   Send,
   Shield,
@@ -111,6 +112,11 @@ export const sidebarData: {
           access: {
             permissions: ["ver asignaciones"]
           }
+        },
+        {
+          title: "Publicidades",
+          url: "/advertisements",
+          icon: Megaphone
         },
 
         {

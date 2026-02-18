@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useSyncExternalStore, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -105,28 +105,51 @@ export function clearPublicDisplayConfig(): void {
 
 type UsePublicDisplayConfigReturn = {
   config: PublicDisplayConfig | null;
+  isConfigReady: boolean;
   saveConfig: (config: PublicDisplayConfig) => void;
   clearConfig: () => void;
 };
 
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+const useIsClient = (): boolean =>
+  useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
+
 export function usePublicDisplayConfig(): UsePublicDisplayConfigReturn {
-  const [config, setConfig] = useState<PublicDisplayConfig | null>(() =>
-    getPublicDisplayConfig(),
+  const isClient = useIsClient();
+  const [snapshotVersion, refreshSnapshot] = useReducer(
+    (version: number) => version + 1,
+    0,
+  );
+
+  const config = useMemo(
+    () => {
+      if (!isClient) {
+        return null;
+      }
+
+      void snapshotVersion;
+      return getPublicDisplayConfig();
+    },
+    [isClient, snapshotVersion],
   );
 
   const saveConfig = useCallback((nextConfig: PublicDisplayConfig) => {
     const parsed = publicDisplayConfigSchema.parse(nextConfig);
-    setConfig(parsed);
     setPublicDisplayConfig(parsed);
+    refreshSnapshot();
   }, []);
 
   const clearConfig = useCallback(() => {
-    setConfig(null);
     clearPublicDisplayConfig();
+    refreshSnapshot();
   }, []);
 
   return {
     config,
+    isConfigReady: isClient,
     saveConfig,
     clearConfig,
   };

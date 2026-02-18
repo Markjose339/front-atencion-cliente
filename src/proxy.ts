@@ -15,6 +15,7 @@ export function proxy(request: NextRequest) {
     '/users',
     '/permissions',
     '/roles',
+    '/advertisements',
   ]
 
   const isProtectedPath = protectedPaths.some(path =>
@@ -39,6 +40,7 @@ export const config = {
     '/users/:path*',
     '/permissions/:path*',
     '/roles/:path*',
+    '/advertisements/:path*',
     '/dashboard/:path*',
     '/login',
   ]

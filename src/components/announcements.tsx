@@ -1,172 +1,135 @@
-'use client'
+﻿"use client";
 
-import { useState, useEffect } from 'react'
-import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 
-interface Announcement {
-  id: string
-  type: 'image' | 'video'
-  src: string
-  alt: string
-  url?: string
-}
+import { useAdvertisementsPlaylistQuery } from "@/hooks/use-advertisements";
+import { resolveAdvertisementFileUrl } from "@/lib/advertisement-media";
+import { Button } from "@/components/ui/button";
 
 export function Announcements() {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { playlist } = useAdvertisementsPlaylistQuery("FULLSCREEN");
+  const advertisements = useMemo(() => playlist.data ?? [], [playlist.data]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const goToNext = useCallback(() => {
+    setCurrentIndex((previous) => {
+      if (advertisements.length === 0) {
+        return 0;
+      }
+
+      return (previous + 1) % advertisements.length;
+    });
+  }, [advertisements.length]);
+  const safeIndex =
+    advertisements.length > 0 ? currentIndex % advertisements.length : 0;
+  const currentAdvertisement = advertisements[safeIndex] ?? null;
+  const currentFileUrl = currentAdvertisement
+    ? resolveAdvertisementFileUrl(currentAdvertisement.fileUrl)
+    : "";
 
   useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const response = await fetch('/api/announcements')
-        if (!response.ok) {
-          throw new Error('Error al cargar los anuncios')
-        }
-        const data = await response.json()
-        setAnnouncements(data.announcements || [])
-      } catch (err) {
-        console.error('[v0] Error fetching announcements:', err)
-        setError(err instanceof Error ? err.message : 'Error desconocido')
-      } finally {
-        setLoading(false)
-      }
+    if (!currentAdvertisement) {
+      return;
     }
 
-    fetchAnnouncements()
-  }, [])
+    if (currentAdvertisement.mediaType !== "IMAGE") {
+      return;
+    }
 
-  useEffect(() => {
-    if (announcements.length === 0) return
+    const durationSeconds = Math.max(currentAdvertisement.durationSeconds ?? 1, 1);
+    const timerId = window.setTimeout(goToNext, durationSeconds * 1000);
 
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % announcements.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [announcements.length])
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [currentAdvertisement, goToNext]);
 
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + announcements.length) % announcements.length)
-  }
-
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % announcements.length)
-  }
-
-  if (loading) {
+  if (playlist.isLoading) {
     return (
-      <div className="relative w-full h-full bg-gradient-to-br from-primary to-primary/80 rounded-xl overflow-hidden flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary-foreground" />
-          <p className="text-primary-foreground text-sm">Cargando anuncios...</p>
+      <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/80">
+        <div className="flex h-full items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-primary-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Cargando publicidades...
+          </div>
         </div>
       </div>
-    )
+    );
   }
 
-  if (error || announcements.length === 0) {
+  if (playlist.error) {
     return (
-      <div className="relative w-full h-full bg-gradient-to-br from-primary to-primary/80 rounded-xl overflow-hidden flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-primary-foreground text-lg font-semibold">
-            {error || 'No hay anuncios disponibles'}
+      <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/80 p-4">
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-primary-foreground">
+          <p className="text-sm">
+            {(playlist.error as { message?: string }).message ?? "No se pudo cargar la playlist"}
           </p>
+          <Button variant="outline" size="sm" onClick={() => playlist.refetch()}>
+            Reintentar
+          </Button>
         </div>
       </div>
-    )
+    );
   }
 
-  const currentAnnouncement = announcements[currentIndex]
+  if (!currentAdvertisement) {
+    return (
+      <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/80">
+        <div className="flex h-full items-center justify-center text-center text-sm text-primary-foreground">
+          No hay publicidades activas para mostrar.
+        </div>
+      </div>
+    );
+  }
+
+  const transitionClass =
+    currentAdvertisement.transition === "FADE"
+      ? "animate-in fade-in duration-500"
+      : currentAdvertisement.transition === "SLIDE"
+        ? "animate-in slide-in-from-right-4 duration-500"
+        : "";
 
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-xl shadow-lg">
-      {/* Contenedor principal */}
-      <div className="relative w-full h-full">
-        {/* Anuncios */}
-        {announcements.map((announcement, index) => (
-          <div
-            key={announcement.id}
-            className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
-              index === currentIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-            }`}
-          >
-            {announcement.type === 'image' ? (
-              <Image
-                src={announcement.src || "/placeholder.svg"}
-                alt={announcement.alt}
-                fill
-                className="object-cover"
-                priority={index === currentIndex}
-              />
-            ) : (
-              <video
-                src={announcement.src}
-                autoPlay={index === currentIndex}
-                muted
-                loop
-                className="w-full h-full object-cover"
-              />
-            )}
-            {/* Overlay oscuro para mejor legibilidad */}
-            <div className="absolute inset-0 bg-black/20" />
-          </div>
-        ))}
-      </div>
-
-      {/* Indicadores de página (puntos) */}
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20">
-        {announcements.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentIndex(index)}
-            className={`transition-all duration-300 rounded-full ${
-              index === currentIndex
-                ? 'bg-white w-8 h-2'
-                : 'bg-white/50 w-2 h-2 hover:bg-white/75'
-            }`}
-            aria-label={`Ir al anuncio ${index + 1}`}
-            aria-current={index === currentIndex}
-          />
-        ))}
-      </div>
-
-      {/* Botones de navegación */}
-      {announcements.length > 1 && (
-        <>
-          <button
-            onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white p-2.5 rounded-full transition-all duration-300 hover:scale-110"
-            aria-label="Anuncio anterior"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <button
-            onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white p-2.5 rounded-full transition-all duration-300 hover:scale-110"
-            aria-label="Siguiente anuncio"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        </>
+    <div className="relative h-full w-full overflow-hidden rounded-xl bg-black">
+      {currentAdvertisement.mediaType === "VIDEO" ? (
+        <video
+          key={`${currentAdvertisement.id}-${safeIndex}`}
+          src={currentFileUrl}
+          autoPlay
+          muted
+          playsInline
+          onEnded={goToNext}
+          onError={goToNext}
+          className={`h-full w-full object-cover ${transitionClass}`}
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={`${currentAdvertisement.id}-${safeIndex}`}
+          src={currentFileUrl}
+          alt={currentAdvertisement.title}
+          className={`h-full w-full object-cover ${transitionClass}`}
+          loading="eager"
+        />
       )}
 
-      {/* Información del anuncio (opcional) */}
-      {currentAnnouncement.url && (
-        <div className="absolute top-4 right-4 z-20">
-          <a
-            href={currentAnnouncement.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300"
-          >
-            Más información
-          </a>
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+
+      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 text-white">
+        <p className="truncate text-sm font-medium">{currentAdvertisement.title}</p>
+        <div className="flex items-center gap-1">
+          {advertisements.map((item, index) => (
+            <span
+              key={item.id}
+              className={`h-2 rounded-full transition-all ${
+                index === safeIndex ? "w-6 bg-white" : "w-2 bg-white/50"
+              }`}
+            />
+          ))}
         </div>
-      )}
+      </div>
     </div>
-  )
+  );
 }

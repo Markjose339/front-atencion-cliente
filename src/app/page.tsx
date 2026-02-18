@@ -14,8 +14,8 @@ const uniqueIds = (values: string[]): string[] =>
 
 export default function Home() {
   const { data: branches = [], isLoading: loadingBranches } = usePublicBranches();
-  const { config, saveConfig } = usePublicDisplayConfig();
-  const [isEditing, setIsEditing] = useState<boolean>(() => !config);
+  const { config, isConfigReady, saveConfig } = usePublicDisplayConfig();
+  const [manualEditing, setManualEditing] = useState<boolean | null>(null);
 
   const [draftBranchId, setDraftBranchId] = useState<string>(config?.branchId ?? "");
   const [draftServiceIds, setDraftServiceIds] = useState<string[]>(() =>
@@ -27,6 +27,11 @@ export default function Home() {
 
   const { isVoiceSupported, voiceEnabled, setVoiceEnabled, announceTicket } =
     useTicketAnnouncer();
+
+  const isEditing =
+    manualEditing === null
+      ? !isConfigReady || !config
+      : manualEditing || !config;
 
   const displayCalls = usePublicDisplayCalls({
     branchId: isEditing ? null : (config?.branchId ?? null),
@@ -88,14 +93,14 @@ export default function Home() {
       serviceIds: filteredServiceIds,
     });
 
-    setIsEditing(false);
+    setManualEditing(false);
     toast.success("Pantalla configurada correctamente");
   };
 
   const handleOpenSettings = () => {
     setDraftBranchId(config?.branchId ?? "");
     setDraftServiceIds(uniqueIds(config?.serviceIds ?? []));
-    setIsEditing(true);
+    setManualEditing(true);
   };
 
   const handleReload = async () => {
@@ -107,7 +112,7 @@ export default function Home() {
     setVoiceEnabled(!voiceEnabled);
   };
 
-  if (isEditing || !config) {
+  if (!isConfigReady || isEditing || !config) {
     return (
       <PublicDisplaySetup
         branches={branches}
