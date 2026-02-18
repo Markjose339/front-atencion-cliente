@@ -4,7 +4,17 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PublicDisplayBoard } from "@/components/public-display/public-display-board";
-import { PublicDisplaySetup } from "@/components/public-display/public-display-setup";
+import {
+  PublicDisplaySetup,
+  PublicDisplaySetupStep,
+} from "@/components/public-display/public-display-setup";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { usePublicDisplayCalls, usePublicDisplayConfig } from "@/hooks/use-public-display";
 import { usePublicBranches, usePublicServicesByBranch } from "@/hooks/use-public";
 import { useTicketAnnouncer } from "@/hooks/use-ticket-announcer";
@@ -15,7 +25,8 @@ const uniqueIds = (values: string[]): string[] =>
 export default function Home() {
   const { data: branches = [], isLoading: loadingBranches } = usePublicBranches();
   const { config, isConfigReady, saveConfig } = usePublicDisplayConfig();
-  const [manualEditing, setManualEditing] = useState<boolean | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [setupStep, setSetupStep] = useState<PublicDisplaySetupStep>("branch");
 
   const [draftBranchId, setDraftBranchId] = useState<string>(config?.branchId ?? "");
   const [draftServiceIds, setDraftServiceIds] = useState<string[]>(() =>
@@ -28,14 +39,19 @@ export default function Home() {
   const { isVoiceSupported, voiceEnabled, setVoiceEnabled, announceTicket } =
     useTicketAnnouncer();
 
-  const isEditing =
-    manualEditing === null
-      ? !isConfigReady || !config
-      : manualEditing || !config;
+  const requiresConfiguration = isConfigReady && !config;
+
+  const openSettings = (nextStep?: PublicDisplaySetupStep) => {
+    const nextBranchId = config?.branchId ?? "";
+    setDraftBranchId(nextBranchId);
+    setDraftServiceIds(uniqueIds(config?.serviceIds ?? []));
+    setSetupStep(nextStep ?? (nextBranchId ? "services" : "branch"));
+    setSettingsOpen(true);
+  };
 
   const displayCalls = usePublicDisplayCalls({
-    branchId: isEditing ? null : (config?.branchId ?? null),
-    serviceIds: isEditing ? [] : (config?.serviceIds ?? []),
+    branchId: config?.branchId ?? null,
+    serviceIds: config?.serviceIds ?? [],
     maxItems: 12,
     onIncomingCall: announceTicket,
   });
@@ -60,6 +76,11 @@ export default function Home() {
   const handleSelectBranch = (branchId: string) => {
     setDraftBranchId(branchId);
     setDraftServiceIds([]);
+    setSetupStep("services");
+  };
+
+  const handleBackToBranches = () => {
+    setSetupStep("branch");
   };
 
   const handleToggleService = (serviceId: string) => {
@@ -93,14 +114,12 @@ export default function Home() {
       serviceIds: filteredServiceIds,
     });
 
-    setManualEditing(false);
+    setSettingsOpen(false);
     toast.success("Pantalla configurada correctamente");
   };
 
   const handleOpenSettings = () => {
-    setDraftBranchId(config?.branchId ?? "");
-    setDraftServiceIds(uniqueIds(config?.serviceIds ?? []));
-    setManualEditing(true);
+    openSettings();
   };
 
   const handleReload = async () => {
@@ -112,35 +131,55 @@ export default function Home() {
     setVoiceEnabled(!voiceEnabled);
   };
 
-  if (!isConfigReady || isEditing || !config) {
-    return (
-      <PublicDisplaySetup
-        branches={branches}
-        services={setupServicesQuery.data ?? []}
-        loadingBranches={loadingBranches}
-        loadingServices={setupServicesQuery.isLoading}
-        selectedBranchId={draftBranchId}
-        selectedServiceIds={draftServiceIds}
-        onSelectBranch={handleSelectBranch}
-        onToggleService={handleToggleService}
-        onSaveConfiguration={handleSaveConfiguration}
-      />
-    );
-  }
-
   return (
-    <PublicDisplayBoard
-      branchName={selectedBranch?.name ?? "Sucursal no disponible"}
-      selectedServiceNames={selectedServiceNames}
-      tickets={displayCalls.tickets}
-      isLoading={displayCalls.isLoading}
-      isFetching={displayCalls.isFetching}
-      errorMessage={displayCalls.error?.message ?? null}
-      isVoiceSupported={isVoiceSupported}
-      voiceEnabled={voiceEnabled}
-      onToggleVoice={handleToggleVoice}
-      onReload={handleReload}
-      onOpenSettings={handleOpenSettings}
-    />
+    <>
+      <PublicDisplayBoard
+        branchName={selectedBranch?.name ?? "Pantalla sin configurar"}
+        selectedServiceNames={selectedServiceNames}
+        tickets={displayCalls.tickets}
+        isLoading={displayCalls.isLoading}
+        isFetching={displayCalls.isFetching}
+        errorMessage={displayCalls.error?.message ?? null}
+        isVoiceSupported={isVoiceSupported}
+        voiceEnabled={voiceEnabled}
+        requiresConfiguration={requiresConfiguration}
+        onToggleVoice={handleToggleVoice}
+        onReload={handleReload}
+        onOpenSettings={handleOpenSettings}
+      />
+
+      <Sheet
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      >
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto border-l-[#20539A]/20 sm:max-w-2xl"
+        >
+          <SheetHeader>
+            <SheetTitle>Configurar pantalla publica</SheetTitle>
+            <SheetDescription>
+              Primero seleccione la sucursal y luego los servicios a mostrar.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="px-4 pb-4">
+            <PublicDisplaySetup
+              branches={branches}
+              services={setupServicesQuery.data ?? []}
+              loadingBranches={loadingBranches}
+              loadingServices={setupServicesQuery.isLoading}
+              selectedBranchId={draftBranchId}
+              selectedServiceIds={draftServiceIds}
+              step={setupStep}
+              onSelectBranch={handleSelectBranch}
+              onBackToBranches={handleBackToBranches}
+              onToggleService={handleToggleService}
+              onSaveConfiguration={handleSaveConfiguration}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
