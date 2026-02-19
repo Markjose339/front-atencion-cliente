@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   CreateWindowServiceAssignmentSchema,
-  CreateWindowServiceAssignmentSchemaType,
 } from "@/lib/schemas/assignment.schema";
 import { useWindowServiceAssignmentsMutation } from "@/hooks/use-assignments";
 import { useBranchesQuery } from "@/hooks/use-branches";
@@ -43,6 +43,14 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 
+type CreateWindowServiceAssignmentFormValues = z.input<
+  typeof CreateWindowServiceAssignmentSchema
+>;
+
+type CreateWindowServiceAssignmentPayload = z.output<
+  typeof CreateWindowServiceAssignmentSchema
+>;
+
 export function AssignmentCreateDialog() {
   const [open, setOpen] = useState(false);
 
@@ -73,7 +81,7 @@ export function AssignmentCreateDialog() {
     search: servicesSearch,
   });
 
-  const form = useForm<CreateWindowServiceAssignmentSchemaType>({
+  const form = useForm<CreateWindowServiceAssignmentFormValues>({
     resolver: zodResolver(CreateWindowServiceAssignmentSchema),
     defaultValues: {
       branchId: "",
@@ -124,14 +132,18 @@ export function AssignmentCreateDialog() {
     }
   };
 
-  const onSubmit = async (values: CreateWindowServiceAssignmentSchemaType) => {
-    toast.promise(create.mutateAsync(values), {
+  const onSubmit = async (values: CreateWindowServiceAssignmentFormValues) => {
+    const payload: CreateWindowServiceAssignmentPayload =
+      CreateWindowServiceAssignmentSchema.parse(values);
+
+    toast.promise(create.mutateAsync(payload), {
       loading: "Creando asignacion de servicio...",
       success: () => {
         handleOpenChange(false);
         return "Asignacion de servicio creada";
       },
-      error: (error) => (error as { message?: string })?.message ?? "Error al crear",
+      error: (error) =>
+        (error as { message?: string })?.message ?? "Error al crear",
     });
   };
 
@@ -163,7 +175,7 @@ export function AssignmentCreateDialog() {
                   <FormControl>
                     <PaginatedCommandSelect
                       items={branchOptions}
-                      value={field.value}
+                      value={field.value ?? ""}
                       placeholder="Selecciona una sucursal"
                       search={branchesSearch}
                       page={branchesPage}
@@ -191,7 +203,7 @@ export function AssignmentCreateDialog() {
                   <FormControl>
                     <PaginatedCommandSelect
                       items={windowOptions}
-                      value={field.value}
+                      value={field.value ?? ""}
                       placeholder="Selecciona una ventanilla"
                       search={windowsSearch}
                       page={windowsPage}
@@ -219,7 +231,7 @@ export function AssignmentCreateDialog() {
                   <FormControl>
                     <PaginatedCommandSelect
                       items={serviceOptions}
-                      value={field.value}
+                      value={field.value ?? ""}
                       placeholder="Selecciona un servicio"
                       search={servicesSearch}
                       page={servicesPage}
@@ -246,13 +258,14 @@ export function AssignmentCreateDialog() {
                   <FormControl>
                     <Label className="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors has-checked:border-primary has-checked:bg-primary/5">
                       <Checkbox
-                        checked={field.value}
+                        checked={!!field.value}
                         onCheckedChange={(checked) => field.onChange(!!checked)}
                         disabled={create.isPending}
                       />
-
                       <div className="grid gap-1.5 font-normal">
-                        <p className="text-sm leading-none font-medium">Asignacion activa</p>
+                        <p className="text-sm leading-none font-medium">
+                          Asignacion activa
+                        </p>
                         <p className="text-muted-foreground text-sm">
                           Si esta desactivada, el servicio no se podra atender en esa ventanilla.
                         </p>
