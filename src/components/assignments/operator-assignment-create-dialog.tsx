@@ -2,14 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  CreateOperatorAssignmentSchema,
-  CreateOperatorAssignmentSchemaType,
-} from "@/lib/schemas/assignment.schema";
+import { CreateOperatorAssignmentSchema } from "@/lib/schemas/assignment.schema";
 import { useOperatorAssignmentsMutation } from "@/hooks/use-assignments";
 import { useBranchesQuery } from "@/hooks/use-branches";
 import { useUsersQuery } from "@/hooks/use-users";
@@ -43,6 +41,9 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 
+type CreateOperatorAssignmentFormValues = z.input<typeof CreateOperatorAssignmentSchema>;
+type CreateOperatorAssignmentPayload = z.output<typeof CreateOperatorAssignmentSchema>;
+
 export function OperatorAssignmentCreateDialog() {
   const [open, setOpen] = useState(false);
 
@@ -73,7 +74,7 @@ export function OperatorAssignmentCreateDialog() {
     search: usersSearch,
   });
 
-  const form = useForm<CreateOperatorAssignmentSchemaType>({
+  const form = useForm<CreateOperatorAssignmentFormValues>({
     resolver: zodResolver(CreateOperatorAssignmentSchema),
     defaultValues: {
       branchId: "",
@@ -124,14 +125,18 @@ export function OperatorAssignmentCreateDialog() {
     }
   };
 
-  const onSubmit = async (values: CreateOperatorAssignmentSchemaType) => {
-    toast.promise(create.mutateAsync(values), {
+  const onSubmit = async (values: CreateOperatorAssignmentFormValues) => {
+    const payload: CreateOperatorAssignmentPayload =
+      CreateOperatorAssignmentSchema.parse(values);
+
+    toast.promise(create.mutateAsync(payload), {
       loading: "Creando asignacion de operador...",
       success: () => {
         handleOpenChange(false);
         return "Asignacion de operador creada";
       },
-      error: (error) => (error as { message?: string })?.message ?? "Error al crear",
+      error: (error) =>
+        (error as { message?: string })?.message ?? "Error al crear",
     });
   };
 
@@ -163,7 +168,7 @@ export function OperatorAssignmentCreateDialog() {
                   <FormControl>
                     <PaginatedCommandSelect
                       items={branchOptions}
-                      value={field.value}
+                      value={field.value ?? ""}
                       placeholder="Selecciona una sucursal"
                       search={branchesSearch}
                       page={branchesPage}
@@ -191,7 +196,7 @@ export function OperatorAssignmentCreateDialog() {
                   <FormControl>
                     <PaginatedCommandSelect
                       items={windowOptions}
-                      value={field.value}
+                      value={field.value ?? ""}
                       placeholder="Selecciona una ventanilla"
                       search={windowsSearch}
                       page={windowsPage}
@@ -219,7 +224,7 @@ export function OperatorAssignmentCreateDialog() {
                   <FormControl>
                     <PaginatedCommandSelect
                       items={userOptions}
-                      value={field.value}
+                      value={field.value ?? ""}
                       placeholder="Selecciona un usuario"
                       search={usersSearch}
                       page={usersPage}
@@ -246,11 +251,10 @@ export function OperatorAssignmentCreateDialog() {
                   <FormControl>
                     <Label className="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors has-checked:border-primary has-checked:bg-primary/5">
                       <Checkbox
-                        checked={field.value}
+                        checked={!!field.value}
                         onCheckedChange={(checked) => field.onChange(!!checked)}
                         disabled={create.isPending}
                       />
-
                       <div className="grid gap-1.5 font-normal">
                         <p className="text-sm leading-none font-medium">Asignacion activa</p>
                         <p className="text-muted-foreground text-sm">
