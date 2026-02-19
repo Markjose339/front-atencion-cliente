@@ -17,7 +17,7 @@ export function BranchesTable() {
   const search: string = searchParams.get("search") || "";
   const departmentId: string = searchParams.get("departmentId") || "";
 
-  const { findAllBranches } = useBranchesQuery({ page, limit, search, departmentId: departmentId || undefined });
+  const { findAllBranches } = useBranchesQuery({ page, limit, search });
   const { data: response, isLoading, error, refetch } = findAllBranches;
 
   const updateURL = useCallback(
