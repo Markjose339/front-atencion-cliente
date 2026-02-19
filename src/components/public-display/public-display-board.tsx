@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
+  BellRing,
   Loader2,
   Moon,
   RefreshCw,
@@ -40,8 +42,11 @@ type PublicDisplayBoardProps = {
 };
 
 export function PublicDisplayBoard({
+  branchName,
+  selectedServiceNames,
   tickets,
   isLoading,
+  isFetching,
   errorMessage,
   isVoiceSupported,
   voiceEnabled,
@@ -51,8 +56,31 @@ export function PublicDisplayBoard({
   onOpenSettings,
 }: PublicDisplayBoardProps) {
   const { resolvedTheme, setTheme } = useTheme();
+  const [menuVisible, setMenuVisible] = useState(false);
+
   const isDarkTheme = resolvedTheme === "dark";
-  const handleToggleTheme = () => {
+  const servicesLabel =
+    selectedServiceNames.length > 0 ? selectedServiceNames.join(", ") : "Sin servicios";
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+
+      if (event.ctrlKey && event.shiftKey && key === "m") {
+        event.preventDefault();
+        setMenuVisible((previous) => !previous);
+      }
+
+      if (key === "escape") {
+        setMenuVisible(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const toggleTheme = () => {
     setTheme(isDarkTheme ? "light" : "dark");
   };
 
@@ -62,8 +90,8 @@ export function PublicDisplayBoard({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,69,145,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(17,69,145,0.12)_1px,transparent_1px)] bg-[size:38px_38px] dark:bg-[linear-gradient(rgba(240,224,73,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(240,224,73,0.12)_1px,transparent_1px)]" />
 
       <div className="relative z-10 flex h-full flex-col">
-        <header className="px-3 pb-2 pt-3 sm:px-5 sm:pb-3 sm:pt-4">
-          <div className="flex items-center justify-end gap-2">
+        {menuVisible ? (
+          <div className="absolute right-5 top-4 z-30">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -71,7 +99,8 @@ export function PublicDisplayBoard({
                   variant="outline"
                   className="h-10 rounded-xl border-[#20539A]/45 bg-white text-[#114591] hover:border-[#114591] hover:bg-[#e9f1ff] dark:border-[#5e81ab]/70 dark:bg-[#123d64] dark:text-[#deebff] dark:hover:border-[#86a9d9] dark:hover:bg-[#114591]"
                 >
-                  <Settings2 className="h-4 w-4" />
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Menu
                 </Button>
               </DropdownMenuTrigger>
 
@@ -89,7 +118,7 @@ export function PublicDisplayBoard({
                   Refrescar tickets
                 </DropdownMenuItem>
 
-                <DropdownMenuItem onSelect={handleToggleTheme}>
+                <DropdownMenuItem onSelect={toggleTheme}>
                   {isDarkTheme ? (
                     <>
                       <Sun className="h-4 w-4" />
@@ -127,9 +156,9 @@ export function PublicDisplayBoard({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </header>
+        ) : null}
 
-        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,4fr)_minmax(0,1fr)] gap-3 px-3 pb-3 sm:gap-4 sm:px-5 sm:pb-5">
+        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,4fr)_minmax(0,1fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
           <div className="min-h-0 rounded-3xl border border-slate-200 bg-white/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-[#163a5f]/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-4">
             <Announcements />
           </div>
@@ -158,7 +187,6 @@ export function PublicDisplayBoard({
                     key={ticket.id}
                     code={ticket.code}
                     window={ticket.windowName}
-                    serviceName={ticket.serviceName}
                   />
                 ))}
               </div>

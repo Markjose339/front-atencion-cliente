@@ -1,16 +1,15 @@
 ﻿"use client"
 
-import { BellRing, Building2 } from "lucide-react"
+import { BellRing } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
 
 interface ClientTicketDisplayProps {
   code: string
   window: string
-  serviceName?: string
 }
 
-export function ClientTicketDisplay({ code, window, serviceName }: ClientTicketDisplayProps) {
+export function ClientTicketDisplay({ code, window }: ClientTicketDisplayProps) {
   const windowLabel = window.toLowerCase().includes("ventanilla")
     ? window
     : `Ventanilla ${window}`
@@ -32,21 +31,8 @@ export function ClientTicketDisplay({ code, window, serviceName }: ClientTicketD
 
         <div className="text-center">
           <p className="text-[2.15rem] font-bold tracking-[0.08em] text-slate-950">{code}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.09em] text-slate-500">
-            Numero asignado
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center gap-2 rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-2">
-          <Building2 className="h-4 w-4 text-sky-700" />
           <p className="text-sm font-semibold text-sky-900">{windowLabel}</p>
         </div>
-
-        {serviceName ? (
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
-            Tipo {serviceName}
-          </p>
-        ) : null}
       </div>
     </Card>
   )
