@@ -35,6 +35,7 @@ type PublicDisplayBoardProps = {
   errorMessage: string | null;
   isVoiceSupported: boolean;
   voiceEnabled: boolean;
+  isAnnouncing: boolean;
   requiresConfiguration: boolean;
   onToggleVoice: () => void;
   onReload: () => void;
@@ -42,14 +43,13 @@ type PublicDisplayBoardProps = {
 };
 
 export function PublicDisplayBoard({
-  branchName,
   selectedServiceNames,
   tickets,
   isLoading,
-  isFetching,
   errorMessage,
   isVoiceSupported,
   voiceEnabled,
+  isAnnouncing,
   requiresConfiguration,
   onToggleVoice,
   onReload,
@@ -59,8 +59,6 @@ export function PublicDisplayBoard({
   const [menuVisible, setMenuVisible] = useState(false);
 
   const isDarkTheme = resolvedTheme === "dark";
-  const servicesLabel =
-    selectedServiceNames.length > 0 ? selectedServiceNames.join(", ") : "Sin servicios";
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -159,11 +157,11 @@ export function PublicDisplayBoard({
         ) : null}
 
         <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,4fr)_minmax(0,1fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
-          <div className="min-h-0 rounded-3xl border border-slate-200 bg-white/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-[#163a5f]/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-4">
-            <Announcements />
+          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-white/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-4">
+            <Announcements duckAudio={isAnnouncing && voiceEnabled} />
           </div>
 
-          <div className="min-h-0 rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-[0_28px_48px_-38px_rgba(15,23,42,0.82)] dark:border-[#55779f]/65 dark:bg-[#163a5f]/86 dark:shadow-[0_30px_52px_-38px_rgba(0,0,0,0.84)] sm:p-5">
+          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/95 p-4 shadow-[0_28px_48px_-38px_rgba(15,23,42,0.82)] dark:border-[#55779f]/65 dark:bg-white/86 dark:shadow-[0_30px_52px_-38px_rgba(0,0,0,0.84)] sm:p-5">
             {isLoading ? (
               <div className="flex h-full min-h-22.5 items-center justify-center text-sm text-[#20539A] dark:text-[#c2d6f1]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -187,6 +185,7 @@ export function PublicDisplayBoard({
                     key={ticket.id}
                     code={ticket.code}
                     window={ticket.windowName}
+                    type={ticket.type}
                   />
                 ))}
               </div>
