@@ -9,7 +9,9 @@ const idField = (label: string) =>
 export const CreateWindowServiceAssignmentSchema = z.object({
   branchId: idField("La sucursal"),
   windowId: idField("La ventanilla"),
-  serviceId: idField("El servicio"),
+  serviceIds: z
+    .array(idField("El servicio"))
+    .min(1, "Debes seleccionar al menos un servicio"),
   isActive: z.boolean(),
 });
 

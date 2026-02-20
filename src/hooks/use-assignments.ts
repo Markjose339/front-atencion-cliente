@@ -8,7 +8,17 @@ import {
 } from "@/lib/schemas/assignment.schema";
 import { api } from "@/lib/api";
 import { ApiResponse } from "@/types/api-response";
-import { OperatorAssignment, WindowServiceAssignment } from "@/types/assignment";
+import {
+  BranchAssignmentsConfigResponse,
+  BranchWindowsResponse,
+  OperatorsSyncPayload,
+  OperatorsSyncResponse,
+  OperatorAssignment,
+  WindowServicesSyncPayload,
+  WindowServicesSyncResponse,
+  WindowServiceAssignment,
+  WindowServiceAssignmentBulkResponse,
+} from "@/types/assignment";
 import { UseQuery } from "@/types/use-query";
 
 export function useWindowServiceAssignmentsQuery({ page, limit, search }: UseQuery) {
@@ -51,12 +61,40 @@ export function useOperatorAssignmentsQuery({ page, limit, search }: UseQuery) {
   return { findAllOperators };
 }
 
+export function useBranchWindowsQuery(branchId: string) {
+  const findBranchWindows = useQuery({
+    queryKey: ["assignments", "branches", branchId, "windows"],
+    enabled: branchId.trim().length > 0,
+    queryFn: () =>
+      api.get<BranchWindowsResponse>(
+        `/assignments/branches/${encodeURIComponent(branchId)}/windows`,
+      ),
+    staleTime: 30_000,
+  });
+
+  return { findBranchWindows };
+}
+
+export function useBranchAssignmentsConfigQuery(branchId: string) {
+  const findBranchConfig = useQuery({
+    queryKey: ["assignments", "branches", branchId, "config"],
+    enabled: branchId.trim().length > 0,
+    queryFn: () =>
+      api.get<BranchAssignmentsConfigResponse>(
+        `/assignments/branches/${encodeURIComponent(branchId)}/config`,
+      ),
+    staleTime: 30_000,
+  });
+
+  return { findBranchConfig };
+}
+
 export function useWindowServiceAssignmentsMutation() {
   const queryClient = useQueryClient();
 
   const create = useMutation({
     mutationFn: (values: CreateWindowServiceAssignmentSchemaType) =>
-      api.post<WindowServiceAssignment>("/assignments/window-services", values),
+      api.post<WindowServiceAssignmentBulkResponse>("/assignments/window-services", values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assignments", "window-services"], exact: false });
     },
@@ -78,6 +116,24 @@ export function useWindowServiceAssignmentsMutation() {
   });
 
   return { create, update, remove };
+}
+
+export function useWindowServicesSyncMutation() {
+  const queryClient = useQueryClient();
+
+  const sync = useMutation({
+    mutationFn: (payload: WindowServicesSyncPayload) =>
+      api.put<WindowServicesSyncResponse>("/assignments/window-services/sync", payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["assignments", "branches", variables.branchId, "config"],
+        exact: false,
+      });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "window-services"], exact: false });
+    },
+  });
+
+  return { sync };
 }
 
 export function useOperatorAssignmentsMutation() {
@@ -107,4 +163,22 @@ export function useOperatorAssignmentsMutation() {
   });
 
   return { create, update, remove };
+}
+
+export function useOperatorsSyncMutation() {
+  const queryClient = useQueryClient();
+
+  const sync = useMutation({
+    mutationFn: (payload: OperatorsSyncPayload) =>
+      api.put<OperatorsSyncResponse>("/assignments/operators/sync", payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["assignments", "branches", variables.branchId, "config"],
+        exact: false,
+      });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "operators"], exact: false });
+    },
+  });
+
+  return { sync };
 }

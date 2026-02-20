@@ -10,7 +10,7 @@ interface TicketCardProps {
   window: string
 }
 
-export function TicketCard({ id, code, status: initialStatus, window }: TicketCardProps) {
+export function TicketCard({ code, status: initialStatus, window }: TicketCardProps) {
   const [status, setStatus] = useState<'waiting' | 'attending' | 'completed'>(initialStatus)
 
   const handleAttending = () => {
@@ -24,13 +24,13 @@ export function TicketCard({ id, code, status: initialStatus, window }: TicketCa
   }
 
   const speakWindow = (windowNumber: string) => {
-    if ('speechSynthesis' in window) {
+    if (typeof globalThis !== 'undefined' && 'speechSynthesis' in globalThis) {
       const utterance = new SpeechSynthesisUtterance(
         `El cliente ${code} debe dirigirse a la ventanilla ${windowNumber}`
       )
       utterance.lang = 'es-ES'
       utterance.rate = 0.9
-      speechSynthesis.speak(utterance)
+      globalThis.speechSynthesis.speak(utterance)
     }
   }
 
@@ -87,7 +87,7 @@ export function TicketCard({ id, code, status: initialStatus, window }: TicketCa
         )}
         {status === 'completed' && (
           <div className="flex-1 bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded text-center">
-            ✓ Finalizado
+            Finalizado
           </div>
         )}
       </div>

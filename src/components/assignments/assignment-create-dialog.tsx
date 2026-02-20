@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ import {
   PaginatedCommandSelect,
   PaginatedItem,
 } from "@/components/ui/paginated-command-select";
+import { PaginatedCheckboxList } from "@/components/ui/paginated-checkbox-list";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -78,10 +79,15 @@ export function AssignmentCreateDialog() {
     defaultValues: {
       branchId: "",
       windowId: "",
-      serviceId: "",
+      serviceIds: [],
       isActive: true,
     },
   });
+
+  const selectedServiceIds = useWatch({
+    control: form.control,
+    name: "serviceIds",
+  }) ?? [];
 
   const branchOptions = useMemo<PaginatedItem[]>(() => {
     return (
@@ -126,10 +132,10 @@ export function AssignmentCreateDialog() {
 
   const onSubmit = async (values: CreateWindowServiceAssignmentSchemaType) => {
     toast.promise(create.mutateAsync(values), {
-      loading: "Creando asignacion de servicio...",
-      success: () => {
+      loading: "Asignando servicios...",
+      success: (response) => {
         handleOpenChange(false);
-        return "Asignacion de servicio creada";
+        return `Solicitados: ${response.summary.requested}. Asignados: ${response.summary.assigned}. Ya asignados: ${response.summary.alreadyAssigned}.`;
       },
       error: (error) => (error as { message?: string })?.message ?? "Error al crear",
     });
@@ -212,25 +218,41 @@ export function AssignmentCreateDialog() {
 
             <FormField
               control={form.control}
-              name="serviceId"
+              name="serviceIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Servicio</FormLabel>
+                  <FormLabel>Servicios</FormLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Seleccionados: {selectedServiceIds.length}
+                  </p>
                   <FormControl>
-                    <PaginatedCommandSelect
+                    <PaginatedCheckboxList
                       items={serviceOptions}
-                      value={field.value}
-                      placeholder="Selecciona un servicio"
+                      selectedIds={field.value ?? []}
                       search={servicesSearch}
                       page={servicesPage}
                       totalPages={findAllServices.data?.meta.totalPages ?? 1}
                       isLoading={findAllServices.isLoading}
-                      onChange={field.onChange}
                       onSearchChange={(value) => {
                         setServicesSearch(value);
                         setServicesPage(1);
                       }}
                       onPageChange={setServicesPage}
+                      onToggle={(serviceId, checked) => {
+                        const currentServiceIds = field.value ?? [];
+
+                        if (checked) {
+                          if (!currentServiceIds.includes(serviceId)) {
+                            field.onChange([...currentServiceIds, serviceId]);
+                          }
+                          return;
+                        }
+
+                        field.onChange(
+                          currentServiceIds.filter((current) => current !== serviceId),
+                        );
+                      }}
+                      hasError={!!form.formState.errors.serviceIds}
                     />
                   </FormControl>
                   <FormMessage />
@@ -271,7 +293,10 @@ export function AssignmentCreateDialog() {
                 </Button>
               </DialogClose>
 
-              <Button type="submit" disabled={create.isPending}>
+              <Button
+                type="submit"
+                disabled={create.isPending || selectedServiceIds.length === 0}
+              >
                 {create.isPending ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>

@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -10,10 +10,12 @@ import {
   CreateOperatorAssignmentSchema,
   CreateOperatorAssignmentSchemaType,
 } from "@/lib/schemas/assignment.schema";
-import { useOperatorAssignmentsMutation } from "@/hooks/use-assignments";
+import {
+  useBranchWindowsQuery,
+  useOperatorAssignmentsMutation,
+} from "@/hooks/use-assignments";
 import { useBranchesQuery } from "@/hooks/use-branches";
 import { useUsersQuery } from "@/hooks/use-users";
-import { useWindowsQuery } from "@/hooks/use-windows";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,6 +45,32 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 
+const getErrorText = (error: unknown): string => {
+  if (!error || typeof error !== "object") {
+    return "Error desconocido";
+  }
+
+  const current = error as Record<string, unknown>;
+
+  if (typeof current.message === "string") {
+    return current.message;
+  }
+
+  if (current.message && typeof current.message === "object") {
+    const nested = current.message as Record<string, unknown>;
+
+    if (typeof nested.message === "string") {
+      return nested.message;
+    }
+
+    if (typeof nested.error === "string") {
+      return nested.error;
+    }
+  }
+
+  return "Error desconocido";
+};
+
 export function OperatorAssignmentCreateDialog() {
   const [open, setOpen] = useState(false);
 
@@ -61,12 +89,6 @@ export function OperatorAssignmentCreateDialog() {
     search: branchesSearch,
   });
 
-  const { findAllWindows } = useWindowsQuery({
-    page: windowsPage,
-    limit: ITEMS_PER_PAGE,
-    search: windowsSearch,
-  });
-
   const { findAllUsers } = useUsersQuery({
     page: usersPage,
     limit: ITEMS_PER_PAGE,
@@ -83,6 +105,36 @@ export function OperatorAssignmentCreateDialog() {
     },
   });
 
+  const selectedBranchId =
+    useWatch({
+      control: form.control,
+      name: "branchId",
+    }) ?? "";
+  const selectedWindowId =
+    useWatch({
+      control: form.control,
+      name: "windowId",
+    }) ?? "";
+  const selectedUserId =
+    useWatch({
+      control: form.control,
+      name: "userId",
+    }) ?? "";
+  const hasSelectedBranch = selectedBranchId.trim().length > 0;
+
+  const { findBranchWindows } = useBranchWindowsQuery(selectedBranchId);
+  const branchWindows = useMemo(
+    () => findBranchWindows.data?.data ?? [],
+    [findBranchWindows.data?.data],
+  );
+  const hasBranchWindows = branchWindows.length > 0;
+  const isBranchWindowsLoading = findBranchWindows.isLoading || findBranchWindows.isFetching;
+  const noWindowsForBranch =
+    hasSelectedBranch &&
+    !isBranchWindowsLoading &&
+    !findBranchWindows.error &&
+    !hasBranchWindows;
+
   const branchOptions = useMemo<PaginatedItem[]>(() => {
     return (
       findAllBranches.data?.data.map((branch) => ({
@@ -93,13 +145,26 @@ export function OperatorAssignmentCreateDialog() {
   }, [findAllBranches.data]);
 
   const windowOptions = useMemo<PaginatedItem[]>(() => {
+    const normalizedSearch = windowsSearch.trim().toLowerCase();
+
     return (
-      findAllWindows.data?.data.map((window) => ({
-        id: window.id,
-        label: window.name,
-      })) ?? []
+      branchWindows
+        .filter(({ window }) => {
+          if (!normalizedSearch) {
+            return true;
+          }
+
+          return (
+            window.name.toLowerCase().includes(normalizedSearch) ||
+            window.code.toLowerCase().includes(normalizedSearch)
+          );
+        })
+        .map(({ window }) => ({
+          id: window.id,
+          label: `${window.name} (${window.code})`,
+        })) ?? []
     );
-  }, [findAllWindows.data]);
+  }, [branchWindows, windowsSearch]);
 
   const userOptions = useMemo<PaginatedItem[]>(() => {
     return (
@@ -169,7 +234,19 @@ export function OperatorAssignmentCreateDialog() {
                       page={branchesPage}
                       totalPages={findAllBranches.data?.meta.totalPages ?? 1}
                       isLoading={findAllBranches.isLoading}
-                      onChange={field.onChange}
+                      disabled={create.isPending}
+                      onChange={(nextBranchId) => {
+                        if (nextBranchId !== field.value) {
+                          form.setValue("windowId", "", {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          });
+                          setWindowsSearch("");
+                          setWindowsPage(1);
+                        }
+
+                        field.onChange(nextBranchId);
+                      }}
                       onSearchChange={(value) => {
                         setBranchesSearch(value);
                         setBranchesPage(1);
@@ -195,8 +272,14 @@ export function OperatorAssignmentCreateDialog() {
                       placeholder="Selecciona una ventanilla"
                       search={windowsSearch}
                       page={windowsPage}
-                      totalPages={findAllWindows.data?.meta.totalPages ?? 1}
-                      isLoading={findAllWindows.isLoading}
+                      totalPages={1}
+                      isLoading={isBranchWindowsLoading}
+                      disabled={
+                        create.isPending ||
+                        !hasSelectedBranch ||
+                        isBranchWindowsLoading ||
+                        noWindowsForBranch
+                      }
                       onChange={field.onChange}
                       onSearchChange={(value) => {
                         setWindowsSearch(value);
@@ -205,6 +288,16 @@ export function OperatorAssignmentCreateDialog() {
                       onPageChange={setWindowsPage}
                     />
                   </FormControl>
+                  {hasSelectedBranch && findBranchWindows.error ? (
+                    <p className="text-sm text-destructive">
+                      No se pudieron cargar las ventanillas: {getErrorText(findBranchWindows.error)}
+                    </p>
+                  ) : null}
+                  {noWindowsForBranch ? (
+                    <p className="text-sm text-muted-foreground">
+                      La sucursal seleccionada no tiene ventanillas disponibles.
+                    </p>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
@@ -225,6 +318,7 @@ export function OperatorAssignmentCreateDialog() {
                       page={usersPage}
                       totalPages={findAllUsers.data?.meta.totalPages ?? 1}
                       isLoading={findAllUsers.isLoading}
+                      disabled={create.isPending}
                       onChange={field.onChange}
                       onSearchChange={(value) => {
                         setUsersSearch(value);
@@ -271,7 +365,16 @@ export function OperatorAssignmentCreateDialog() {
                 </Button>
               </DialogClose>
 
-              <Button type="submit" disabled={create.isPending}>
+              <Button
+                type="submit"
+                disabled={
+                  create.isPending ||
+                  !hasSelectedBranch ||
+                  !selectedWindowId ||
+                  !selectedUserId ||
+                  noWindowsForBranch
+                }
+              >
                 {create.isPending ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>

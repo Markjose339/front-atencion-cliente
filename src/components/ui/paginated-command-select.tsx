@@ -36,6 +36,7 @@ interface PaginatedCommandSelectProps {
   page: number
   totalPages: number
   isLoading?: boolean
+  disabled?: boolean
   onChange: (value: string) => void
   onSearchChange: (value: string) => void
   onPageChange: (page: number) => void
@@ -49,6 +50,7 @@ export function PaginatedCommandSelect({
   page,
   totalPages,
   isLoading = false,
+  disabled = false,
   onChange,
   onSearchChange,
   onPageChange,
@@ -116,6 +118,7 @@ export function PaginatedCommandSelect({
         <Button
           variant="outline"
           role="combobox"
+          disabled={disabled}
           className={`w-full justify-between font-normal ${
             !selected ? "text-muted-foreground" : ""
           }`}
