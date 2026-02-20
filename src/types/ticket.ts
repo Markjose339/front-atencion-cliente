@@ -13,7 +13,6 @@ export interface Ticket {
   packageCode: string | null;
   type: TicketType;
   status: TicketStatus;
-  branchId: string;
-  serviceId: string;
+  branchName: string;
   createdAt: string;
 }

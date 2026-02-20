@@ -32,7 +32,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Command className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">A.G.B.C.</span>
+                  <span className="truncate font-medium">Correos de Bolivia</span>
                   <span className="truncate text-xs">Empresa</span>
                 </div>
               </Link>
