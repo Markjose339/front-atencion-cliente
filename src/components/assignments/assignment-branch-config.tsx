@@ -16,12 +16,21 @@ import {
 } from "@/types/assignment";
 
 import { Protected } from "@/components/auth/protected";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   PaginatedCommandSelect,
   PaginatedItem,
 } from "@/components/ui/paginated-command-select";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -373,332 +382,384 @@ export function AssignmentBranchConfig() {
   const operatorsRemaining = operatorsCatalog.length - new Set(
     operatorRows.map((row) => row.userId).filter(Boolean),
   ).size;
+  const totalSelectedServices = windowServicesRows.reduce(
+    (accumulator, row) => accumulator + row.serviceIds.length,
+    0,
+  );
+  const activeOperatorCount = operatorRows.filter((row) => row.isActive).length;
 
   return (
-    <section className="rounded-xl border bg-background shadow-sm space-y-4 p-3 sm:p-4">
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px] md:items-start">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Configuracion por sucursal</h2>
-          <p className="text-sm text-muted-foreground">
-            Carga la configuracion completa de una sucursal y guarda cambios por bloque.
-          </p>
-        </div>
+    <Card className="overflow-hidden">
+      <CardHeader className="border-b bg-muted/20">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px] md:items-start">
+          <div className="space-y-2">
+            <CardTitle>Configuracion por sucursal</CardTitle>
+            <CardDescription>
+              Carga la configuracion completa de una sucursal y guarda cambios por bloque.
+            </CardDescription>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">Servicios: {availableServices.length}</Badge>
+              <Badge variant="outline">Ventanillas: {config?.windows.length ?? 0}</Badge>
+              <Badge variant="outline">Operadores: {operatorsCatalog.length}</Badge>
+            </div>
+          </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Sucursal</p>
-          <PaginatedCommandSelect
-            items={branchOptions}
-            value={selectedBranchId}
-            placeholder="Selecciona una sucursal"
-            search={branchesSearch}
-            page={branchesPage}
-            totalPages={findAllBranches.data?.meta.totalPages ?? 1}
-            isLoading={findAllBranches.isLoading}
-            onChange={handleBranchChange}
-            onSearchChange={(value) => {
-              setBranchesSearch(value);
-              setBranchesPage(1);
-            }}
-            onPageChange={setBranchesPage}
-          />
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Sucursal</p>
+            <PaginatedCommandSelect
+              items={branchOptions}
+              value={selectedBranchId}
+              placeholder="Selecciona una sucursal"
+              search={branchesSearch}
+              page={branchesPage}
+              totalPages={findAllBranches.data?.meta.totalPages ?? 1}
+              isLoading={findAllBranches.isLoading}
+              onChange={handleBranchChange}
+              onSearchChange={(value) => {
+                setBranchesSearch(value);
+                setBranchesPage(1);
+              }}
+              onPageChange={setBranchesPage}
+            />
+          </div>
         </div>
-      </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4 pt-6">
 
       {!selectedBranchId ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border border-dashed bg-muted/10 p-8 text-center text-sm text-muted-foreground">
           Selecciona una sucursal para editar servicios y operadores por ventanilla.
         </div>
       ) : null}
 
       {selectedBranchId && findBranchConfig.isLoading && !config ? (
-        <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-          Cargando configuracion de la sucursal...
+        <div className="rounded-lg border bg-muted/10 p-8 text-center text-sm text-muted-foreground">
+          <div className="inline-flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Cargando configuracion de la sucursal...
+          </div>
         </div>
       ) : null}
 
       {selectedBranchId && findBranchConfig.error ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center text-red-500 space-y-4 rounded-lg border">
-          <AlertCircle className="w-8 h-8" />
-          <p className="text-sm font-medium">
-            No se pudo cargar la configuracion: {getErrorText(findBranchConfig.error)}
-          </p>
-          <Button variant="outline" onClick={() => findBranchConfig.refetch()}>
-            Reintentar
-          </Button>
-        </div>
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+            <Badge variant="destructive">Error</Badge>
+            <AlertCircle className="h-6 w-6 text-destructive" />
+            <p className="text-sm font-medium text-destructive">
+              No se pudo cargar la configuracion: {getErrorText(findBranchConfig.error)}
+            </p>
+            <Button variant="outline" onClick={() => findBranchConfig.refetch()}>
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
 
       {selectedBranchId && config ? (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Sucursal seleccionada</p>
-              <p className="font-semibold">
-                {config.branch.name}
-                {findBranchConfig.isFetching ? (
-                  <span className="ml-2 inline-flex items-center text-xs text-muted-foreground">
-                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    Actualizando...
-                  </span>
-                ) : null}
-              </p>
-            </div>
+          <div className="rounded-lg border bg-muted/10 p-3 sm:p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Sucursal seleccionada</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge>{config.branch.name}</Badge>
+                  <Badge variant="outline">Servicios seleccionados: {totalSelectedServices}</Badge>
+                  <Badge variant="outline">Operadores activos: {activeOperatorCount}</Badge>
+                  {findBranchConfig.isFetching ? (
+                    <Badge variant="secondary" className="inline-flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Actualizando
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
 
-            <div className="inline-flex items-center gap-1 rounded-lg border p-1">
-              <Button
-                type="button"
-                size="sm"
-                variant={activeBlock === "services" ? "secondary" : "ghost"}
-                onClick={() => setActiveBlock("services")}
-              >
-                Servicios por ventanilla
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={activeBlock === "operators" ? "secondary" : "ghost"}
-                onClick={() => setActiveBlock("operators")}
-              >
-                Operadores por ventanilla
-              </Button>
+              <div className="inline-flex items-center gap-1 rounded-lg border bg-background p-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={activeBlock === "services" ? "secondary" : "ghost"}
+                  onClick={() => setActiveBlock("services")}
+                >
+                  Servicios por ventanilla
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={activeBlock === "operators" ? "secondary" : "ghost"}
+                  onClick={() => setActiveBlock("operators")}
+                >
+                  Operadores por ventanilla
+                </Button>
+              </div>
             </div>
           </div>
 
+          <Separator />
+
           {activeBlock === "services" ? (
-            <div className="space-y-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-medium">Servicios por ventanilla</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Marca o desmarca servicios por cada ventanilla y guarda en lote.
-                  </p>
-                </div>
-
-                <Protected permissions={["crear asignaciones", "editar asignaciones"]}>
-                  <Button onClick={saveWindowServices} disabled={saveServicesDisabled}>
-                    {syncWindowServices.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Guardar servicios
-                  </Button>
-                </Protected>
-              </div>
-
-              {serviceSaveError ? (
-                <p className="text-sm text-destructive">{serviceSaveError}</p>
-              ) : null}
-
-              {windowServicesRows.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  Esta sucursal no tiene ventanillas para configurar.
-                </div>
-              ) : availableServices.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No hay servicios disponibles para asignar en esta sucursal.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[220px]">Ventanilla</TableHead>
-                      {availableServices.map((service) => (
-                        <TableHead key={service.id} className="min-w-[140px] text-center">
-                          <div className="flex flex-col">
-                            <span>{service.code}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {service.abbreviation || service.name}
-                            </span>
-                          </div>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {windowServicesRows.map((row) => (
-                      <TableRow key={row.windowId}>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{row.windowName}</span>
-                            <span className="text-xs text-muted-foreground">{row.windowCode}</span>
-                          </div>
-                        </TableCell>
-
-                        {availableServices.map((service) => {
-                          const checked = row.serviceIds.includes(service.id);
-                          return (
-                            <TableCell key={`${row.windowId}:${service.id}`} className="text-center">
-                              <div className="flex justify-center">
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(value) =>
-                                    toggleServiceInWindow(row.windowId, service.id, value === true)
-                                  }
-                                  disabled={syncWindowServices.isPending}
-                                />
-                              </div>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-medium">Operadores por ventanilla</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Administra el mapeo operador a ventanilla y sincroniza en lote.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Protected permissions={["crear asignaciones", "editar asignaciones"]}>
-                    <Button
-                      variant="outline"
-                      onClick={handleAddOperatorRow}
-                      disabled={
-                        syncOperators.isPending ||
-                        windowsForOperators.length === 0 ||
-                        operatorsCatalog.length === 0 ||
-                        operatorsRemaining <= 0
-                      }
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Agregar operador
-                    </Button>
-                  </Protected>
+            <Card className="gap-0">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-base">Servicios por ventanilla</CardTitle>
+                    <CardDescription>
+                      Marca o desmarca servicios por cada ventanilla y guarda en lote.
+                    </CardDescription>
+                  </div>
 
                   <Protected permissions={["crear asignaciones", "editar asignaciones"]}>
-                    <Button onClick={saveOperatorAssignments} disabled={saveOperatorsDisabled}>
-                      {syncOperators.isPending ? (
+                    <Button onClick={saveWindowServices} disabled={saveServicesDisabled}>
+                      {syncWindowServices.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Save className="mr-2 h-4 w-4" />
                       )}
-                      Guardar operadores
+                      Guardar servicios
                     </Button>
                   </Protected>
                 </div>
-              </div>
+              </CardHeader>
 
-              {operatorSaveError ? (
-                <p className="text-sm text-destructive">{operatorSaveError}</p>
-              ) : null}
+              <CardContent className="space-y-3">
+                {serviceSaveError ? (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    {serviceSaveError}
+                  </div>
+                ) : null}
 
-              {duplicateOperatorIds.size > 0 ? (
-                <p className="text-sm text-destructive">
-                  Operadores duplicados: {duplicateOperatorNames}
-                </p>
-              ) : null}
+                {windowServicesRows.length === 0 ? (
+                  <div className="rounded-lg border border-dashed bg-muted/10 p-8 text-center text-sm text-muted-foreground">
+                    Esta sucursal no tiene ventanillas para configurar.
+                  </div>
+                ) : availableServices.length === 0 ? (
+                  <div className="rounded-lg border border-dashed bg-muted/10 p-8 text-center text-sm text-muted-foreground">
+                    No hay servicios disponibles para asignar en esta sucursal.
+                  </div>
+                ) : (
+                  <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40">
+                          <TableHead className="min-w-[220px]">Ventanilla</TableHead>
+                          {availableServices.map((service) => (
+                            <TableHead key={service.id} className="min-w-[140px] text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline">{service.code}</Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {service.abbreviation || service.name}
+                                </span>
+                              </div>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
 
-              {operatorRows.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  Sin asignaciones de operador. Puedes guardar vacio para limpiar todo.
+                      <TableBody>
+                        {windowServicesRows.map((row) => (
+                          <TableRow key={row.windowId}>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium">{row.windowName}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">{row.windowCode}</span>
+                                  <Badge variant="secondary">{row.serviceIds.length} servicios</Badge>
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            {availableServices.map((service) => {
+                              const checked = row.serviceIds.includes(service.id);
+                              return (
+                                <TableCell key={`${row.windowId}:${service.id}`} className="text-center">
+                                  <div className="flex justify-center">
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(value) =>
+                                        toggleServiceInWindow(
+                                          row.windowId,
+                                          service.id,
+                                          value === true,
+                                        )
+                                      }
+                                      disabled={syncWindowServices.isPending}
+                                    />
+                                  </div>
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="gap-0">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-base">Operadores por ventanilla</CardTitle>
+                    <CardDescription>
+                      Administra el mapeo operador a ventanilla y sincroniza en lote.
+                    </CardDescription>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Protected permissions={["crear asignaciones", "editar asignaciones"]}>
+                      <Button
+                        variant="outline"
+                        onClick={handleAddOperatorRow}
+                        disabled={
+                          syncOperators.isPending ||
+                          windowsForOperators.length === 0 ||
+                          operatorsCatalog.length === 0 ||
+                          operatorsRemaining <= 0
+                        }
+                      >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Agregar operador
+                      </Button>
+                    </Protected>
+
+                    <Protected permissions={["crear asignaciones", "editar asignaciones"]}>
+                      <Button onClick={saveOperatorAssignments} disabled={saveOperatorsDisabled}>
+                        {syncOperators.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="mr-2 h-4 w-4" />
+                        )}
+                        Guardar operadores
+                      </Button>
+                    </Protected>
+                  </div>
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[42%]">Operador</TableHead>
-                      <TableHead className="w-[38%]">Ventanilla</TableHead>
-                      <TableHead className="w-[10%] text-center">Activo</TableHead>
-                      <TableHead className="w-[10%] text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
+              </CardHeader>
 
-                  <TableBody>
-                    {operatorRows.map((row) => (
-                      <TableRow key={row.localId}>
-                        <TableCell>
-                          <Select
-                            value={row.userId}
-                            onValueChange={(userId) => updateOperatorRow(row.localId, { userId })}
-                            disabled={syncOperators.isPending}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecciona operador" />
-                            </SelectTrigger>
-                            <SelectContent align="start">
-                              {operatorsCatalog.map((operator) => {
-                                const selectedByOtherRow = operatorRows.some(
-                                  (candidate) =>
-                                    candidate.localId !== row.localId &&
-                                    candidate.userId === operator.id,
-                                );
+              <CardContent className="space-y-3">
+                {operatorSaveError ? (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    {operatorSaveError}
+                  </div>
+                ) : null}
 
-                                return (
-                                  <SelectItem
-                                    key={operator.id}
-                                    value={operator.id}
-                                    disabled={selectedByOtherRow}
-                                  >
-                                    {operator.name} ({operator.email})
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
+                {duplicateOperatorIds.size > 0 ? (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    Operadores duplicados: {duplicateOperatorNames}
+                  </div>
+                ) : null}
 
-                        <TableCell>
-                          <Select
-                            value={row.windowId}
-                            onValueChange={(windowId) => updateOperatorRow(row.localId, { windowId })}
-                            disabled={syncOperators.isPending}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecciona ventanilla" />
-                            </SelectTrigger>
-                            <SelectContent align="start">
-                              {windowsForOperators.map((window) => (
-                                <SelectItem key={window.id} value={window.id}>
-                                  {window.name} ({window.code})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
+                {operatorRows.length === 0 ? (
+                  <div className="rounded-lg border border-dashed bg-muted/10 p-8 text-center text-sm text-muted-foreground">
+                    Sin asignaciones de operador. Puedes guardar vacio para limpiar todo.
+                  </div>
+                ) : (
+                  <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40">
+                          <TableHead className="w-[42%]">Operador</TableHead>
+                          <TableHead className="w-[38%]">Ventanilla</TableHead>
+                          <TableHead className="w-[10%] text-center">Activo</TableHead>
+                          <TableHead className="w-[10%] text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
 
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            <Checkbox
-                              checked={row.isActive}
-                              onCheckedChange={(value) =>
-                                updateOperatorRow(row.localId, { isActive: value === true })
-                              }
-                              disabled={syncOperators.isPending}
-                            />
-                          </div>
-                        </TableCell>
+                      <TableBody>
+                        {operatorRows.map((row) => (
+                          <TableRow key={row.localId}>
+                            <TableCell>
+                              <Select
+                                value={row.userId}
+                                onValueChange={(userId) => updateOperatorRow(row.localId, { userId })}
+                                disabled={syncOperators.isPending}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Selecciona operador" />
+                                </SelectTrigger>
+                                <SelectContent align="start">
+                                  {operatorsCatalog.map((operator) => {
+                                    const selectedByOtherRow = operatorRows.some(
+                                      (candidate) =>
+                                        candidate.localId !== row.localId &&
+                                        candidate.userId === operator.id,
+                                    );
 
-                        <TableCell className="text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => removeOperatorRow(row.localId)}
-                            disabled={syncOperators.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                            <span className="sr-only">Eliminar fila</span>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+                                    return (
+                                      <SelectItem
+                                        key={operator.id}
+                                        value={operator.id}
+                                        disabled={selectedByOtherRow}
+                                      >
+                                        {operator.name} ({operator.email})
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+
+                            <TableCell>
+                              <Select
+                                value={row.windowId}
+                                onValueChange={(windowId) =>
+                                  updateOperatorRow(row.localId, { windowId })
+                                }
+                                disabled={syncOperators.isPending}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Selecciona ventanilla" />
+                                </SelectTrigger>
+                                <SelectContent align="start">
+                                  {windowsForOperators.map((window) => (
+                                    <SelectItem key={window.id} value={window.id}>
+                                      {window.name} ({window.code})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+
+                            <TableCell className="text-center">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={row.isActive}
+                                  onCheckedChange={(value) =>
+                                    updateOperatorRow(row.localId, { isActive: value === true })
+                                  }
+                                  disabled={syncOperators.isPending}
+                                />
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => removeOperatorRow(row.localId)}
+                                disabled={syncOperators.isPending}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <span className="sr-only">Eliminar fila</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
         </div>
       ) : null}
-    </section>
+      </CardContent>
+    </Card>
   );
 }
