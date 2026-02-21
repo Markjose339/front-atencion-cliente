@@ -23,6 +23,32 @@ export interface CustomerServiceTicket {
   createdAt: string;
 }
 
+export interface CustomerServiceTimelineDuration {
+  milliseconds: number;
+  seconds: number;
+  minutes: number;
+}
+
+export interface CustomerServiceTimelineTicket {
+  id: string;
+  code: string;
+  packageCode: string | null;
+  type: CustomerServiceTicketType;
+  status: TicketStatus;
+  branchId: string;
+  branchName: string;
+  serviceId: string;
+  serviceName: string;
+  userId: string | null;
+  userName: string | null;
+  calledAt: string | null;
+  attentionStartedAt: string | null;
+  attentionFinishedAt: string | null;
+  createdAt: string;
+  fromCreatedToAttention: CustomerServiceTimelineDuration | null;
+  fromAttentionStartToFinish: CustomerServiceTimelineDuration | null;
+}
+
 export interface CustomerServiceQueueResponse extends ApiResponse<CustomerServiceTicket> {
   isAttendingTicket: boolean;
   calledTicket?: CustomerServiceCalledTicket | null;
@@ -44,6 +70,8 @@ export interface CustomerServiceCalledTicket {
 export type CustomerService = CustomerServiceTicket;
 export type CustomerServiceResponse = CustomerServiceQueueResponse;
 export type CustomerServiceCallNextResponse = CustomerServiceCalledTicket;
+export type CustomerServiceTimelinesResponse =
+  ApiResponse<CustomerServiceTimelineTicket>;
 
 export interface CustomerServiceWindowOption {
   branchId: string;

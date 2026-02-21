@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Protected } from "../auth/protected";
 
 interface AdvertisementActionsProps {
   advertisement: Advertisement;
@@ -51,18 +52,23 @@ export function AdvertisementActions({ advertisement, options }: AdvertisementAc
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setEditOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["editar publicidades"]}>
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          </Protected>
 
-          <DropdownMenuItem
-            className="cursor-pointer text-destructive focus:text-destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
+          <Protected permissions={["eliminar publicidades"]}>
+            <DropdownMenuItem
+              className="cursor-pointer text-destructive focus:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
+          </Protected>
+
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -5,6 +5,31 @@ import { Branch } from "@/types/branch";
 import { BranchSchemaType } from "@/lib/schemas/branch.schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+const BRANCHES_BATCH_LIMIT = 100;
+
+const getAllBranches = async (): Promise<Branch[]> => {
+  let page = 1;
+  let totalPages = 1;
+  const rows: Branch[] = [];
+
+  while (page <= totalPages) {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: BRANCHES_BATCH_LIMIT.toString(),
+    });
+
+    const response = await api.get<ApiResponse<Branch>>(
+      `/branches?${params.toString()}`,
+    );
+
+    totalPages = response.meta.totalPages ?? 1;
+    rows.push(...response.data);
+    page += 1;
+  }
+
+  return rows;
+};
+
 export function useBranchesQuery({
   page,
   limit,
@@ -25,6 +50,16 @@ export function useBranchesQuery({
   });
 
   return { findAllBranches };
+}
+
+export function useAllBranchesQuery() {
+  const findAllBranchesOptions = useQuery({
+    queryKey: ["branches", "all"],
+    queryFn: getAllBranches,
+    staleTime: 60_000,
+  });
+
+  return { findAllBranchesOptions };
 }
 
 export function useBranchesMutation() {

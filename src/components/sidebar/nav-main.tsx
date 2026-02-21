@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { ChevronRight } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
-import type { NavGroup, NavItem, SubItem, AccessRule } from "./nav-config"
+import type { NavGroup, NavItem, AccessRule } from "./nav-config"
 
 import {
   Collapsible,
@@ -28,6 +28,14 @@ import {
 function matchRoute(pathname: string, url: string) {
   if (url === "/") return pathname === "/"
   return pathname === url || pathname.startsWith(url + "/")
+}
+
+function getMostSpecificSubRoute(pathname: string, urls: string[]): string | null {
+  const matches = urls
+    .filter((url) => matchRoute(pathname, url))
+    .sort((a, b) => b.length - a.length)
+
+  return matches[0] ?? null
 }
 
 function canAccess(
@@ -112,9 +120,13 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
               {group.items.map((item) => {
                 const hasSub = Boolean(item.items?.length)
                 const itemActive = matchRoute(pathname, item.url)
-                const anySubActive = Boolean(
-                  item.items?.some((s) => matchRoute(pathname, s.url)),
-                )
+                const activeSubUrl = hasSub
+                  ? getMostSpecificSubRoute(
+                      pathname,
+                      item.items!.map((subItem) => subItem.url),
+                    )
+                  : null
+                const anySubActive = Boolean(activeSubUrl)
                 const defaultOpen = itemActive || anySubActive
 
                 if (!hasSub) {
@@ -153,7 +165,7 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                       <CollapsibleContent>
                         <SidebarMenuSub>
                           {item.items!.map((sub) => {
-                            const subActive = matchRoute(pathname, sub.url)
+                            const subActive = sub.url === activeSubUrl
                             return (
                               <SidebarMenuSubItem key={sub.title}>
                                 <SidebarMenuSubButton asChild isActive={subActive}>
