@@ -157,11 +157,11 @@ export function PublicDisplayBoard({
         ) : null}
 
         <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,4fr)_minmax(0,1fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
-          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-white/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-4">
+          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-white/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-2">
             <Announcements duckAudio={isAnnouncing && voiceEnabled} />
           </div>
 
-          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/95 p-4 shadow-[0_28px_48px_-38px_rgba(15,23,42,0.82)] dark:border-[#55779f]/65 dark:bg-white/86 dark:shadow-[0_30px_52px_-38px_rgba(0,0,0,0.84)] sm:p-5">
+          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/95 p-4 shadow-[0_28px_48px_-38px_rgba(15,23,42,0.82)] dark:border-[#55779f]/65 dark:bg-white/86 dark:shadow-[0_30px_52px_-38px_rgba(0,0,0,0.84)] sm:p-2">
             {isLoading ? (
               <div className="flex h-full min-h-22.5 items-center justify-center text-sm text-[#20539A] dark:text-[#c2d6f1]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -192,7 +192,7 @@ export function PublicDisplayBoard({
             ) : null}
 
             {!isLoading && !errorMessage && tickets.length === 0 ? (
-              <div className="flex h-full min-h-[90px] items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-slate-50/80 p-4 text-center text-sm text-slate-600 dark:border-[#5f82ac]/50 dark:bg-[#173a5e]/70 dark:text-[#c6d9f2]">
+              <div className="flex h-full min-h-22.5 items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-slate-50/80 p-4 text-center text-sm text-slate-600 dark:border-[#5f82ac]/50 dark:bg-[#173a5e]/70 dark:text-[#c6d9f2]">
                 {requiresConfiguration ? (
                   <div className="space-y-3">
                     <p>Configure la pantalla para empezar a recibir tickets llamados.</p>

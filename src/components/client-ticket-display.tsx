@@ -48,7 +48,7 @@ export function ClientTicketDisplay({ code, window, type }: ClientTicketDisplayP
         <div className="flex items-center justify-between">
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em]",
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-widest",
               isPreferential
                 ? "border-[#D38E2A]/45 bg-white/80 text-[#B5771F] dark:border-[#EECA46]/45 dark:bg-[#214766]/80 dark:text-[#FDCB35]"
                 : "border-slate-200 bg-slate-50 text-slate-500 dark:border-[#56789f]/60 dark:bg-[#1b446e]/70 dark:text-[#d8e7fb]",
