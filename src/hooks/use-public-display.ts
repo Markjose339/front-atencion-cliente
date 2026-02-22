@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useSyncExternalStore, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -13,6 +13,7 @@ import { joinPublicQueue } from "@/lib/socket";
 import { PublicDisplayCalledTicket, PublicDisplayConfig } from "@/types/public-display";
 
 const PUBLIC_DISPLAY_CONFIG_KEY = "public_display_config_v1";
+const PUBLIC_DISPLAY_CONFIG_EVENT = "public-display-config-change";
 
 const normalizeServiceIds = (serviceIds: string[]): string[] =>
   Array.from(
@@ -86,6 +87,14 @@ export function getPublicDisplayConfig(): PublicDisplayConfig | null {
   return parseStoredConfig(rawConfig);
 }
 
+const getPublicDisplayConfigSnapshot = (): string | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(PUBLIC_DISPLAY_CONFIG_KEY);
+};
+
 export function setPublicDisplayConfig(config: PublicDisplayConfig): void {
   if (typeof window === "undefined") {
     return;
@@ -93,6 +102,7 @@ export function setPublicDisplayConfig(config: PublicDisplayConfig): void {
 
   const parsed = publicDisplayConfigSchema.parse(config);
   window.localStorage.setItem(PUBLIC_DISPLAY_CONFIG_KEY, JSON.stringify(parsed));
+  window.dispatchEvent(new Event(PUBLIC_DISPLAY_CONFIG_EVENT));
 }
 
 export function clearPublicDisplayConfig(): void {
@@ -101,6 +111,7 @@ export function clearPublicDisplayConfig(): void {
   }
 
   window.localStorage.removeItem(PUBLIC_DISPLAY_CONFIG_KEY);
+  window.dispatchEvent(new Event(PUBLIC_DISPLAY_CONFIG_EVENT));
 }
 
 type UsePublicDisplayConfigReturn = {
@@ -117,39 +128,55 @@ const getServerSnapshot = () => false;
 const useIsClient = (): boolean =>
   useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
+const subscribePublicDisplayConfig = (onStoreChange: () => void) => {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.storageArea !== window.localStorage) {
+      return;
+    }
+
+    if (event.key && event.key !== PUBLIC_DISPLAY_CONFIG_KEY) {
+      return;
+    }
+
+    onStoreChange();
+  };
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(PUBLIC_DISPLAY_CONFIG_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(PUBLIC_DISPLAY_CONFIG_EVENT, onStoreChange);
+  };
+};
+
 export function usePublicDisplayConfig(): UsePublicDisplayConfigReturn {
-  const isClient = useIsClient();
-  const [snapshotVersion, refreshSnapshot] = useReducer(
-    (version: number) => version + 1,
-    0,
+  const isConfigReady = useIsClient();
+  const rawConfig = useSyncExternalStore(
+    subscribePublicDisplayConfig,
+    getPublicDisplayConfigSnapshot,
+    () => null,
   );
-
   const config = useMemo(
-    () => {
-      if (!isClient) {
-        return null;
-      }
-
-      void snapshotVersion;
-      return getPublicDisplayConfig();
-    },
-    [isClient, snapshotVersion],
+    () => (rawConfig ? parseStoredConfig(rawConfig) : null),
+    [rawConfig],
   );
 
   const saveConfig = useCallback((nextConfig: PublicDisplayConfig) => {
-    const parsed = publicDisplayConfigSchema.parse(nextConfig);
-    setPublicDisplayConfig(parsed);
-    refreshSnapshot();
+    setPublicDisplayConfig(nextConfig);
   }, []);
 
   const clearConfig = useCallback(() => {
     clearPublicDisplayConfig();
-    refreshSnapshot();
   }, []);
 
   return {
     config,
-    isConfigReady: isClient,
+    isConfigReady,
     saveConfig,
     clearConfig,
   };
@@ -221,6 +248,7 @@ export function usePublicDisplayCalls({
       return compactTicketList(parsedResponse.data.data, maxItems);
     },
     staleTime: 15_000,
+    refetchOnMount: "always",
     refetchInterval: 20_000,
   });
 

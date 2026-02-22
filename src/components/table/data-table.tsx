@@ -40,6 +40,7 @@ interface DataTableProps<TData, TValue> {
   onSearchChange?: (value: string) => void
   searchValue?: string
   searchPlaceholder?: string
+  searchDebounceMs?: number
   totalItems?: number
 }
 
@@ -54,6 +55,7 @@ export function DataTable<TData, TValue>({
   onSearchChange,
   searchValue = "",
   searchPlaceholder = "Buscar...",
+  searchDebounceMs = 500,
   totalItems = 0,
 }: DataTableProps<TData, TValue>) {
   "use no memo" 
@@ -68,10 +70,10 @@ export function DataTable<TData, TValue>({
       if (localSearch !== searchValue) {
         onSearchChange?.(localSearch)
       }
-    }, 500)
+    }, searchDebounceMs)
 
     return () => clearTimeout(timeoutId)
-  }, [localSearch, searchValue, onSearchChange])
+  }, [localSearch, searchValue, onSearchChange, searchDebounceMs])
 
   React.useEffect(() => {
     setLocalSearch(searchValue)

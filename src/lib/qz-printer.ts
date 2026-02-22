@@ -144,7 +144,8 @@ export class QZPrinter {
 
     return [
       ESC + "@" + ESC + "a1" + ESC + "M" + "\x00" + GS + "!" + "\x00",
-      "AGENCIA BOLIVIANA DE CORREOS" + LF,
+      "CORREOS DE BOLIVIA" + LF,
+      `Sucursal: ${ticket.branchName}` + LF,
       LF,
       GS + "!" + "\x11" + ESC + "E" + "\x01",
       ticket.code + LF,
@@ -152,7 +153,6 @@ export class QZPrinter {
       LF,
       ...(hasPackageCode ? ["Paquete: " + packageCode + LF] : []),
       `Fecha/Hora: ${fechaHora}` + LF,
-      LF,
       "Espere su turno - Gracias por su paciencia" + LF,
       LF,
       ESC + "d" + "\x02" + GS + "V" + "\x01",

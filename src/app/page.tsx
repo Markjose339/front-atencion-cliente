@@ -36,7 +36,7 @@ export default function Home() {
   const setupServicesQuery = usePublicServicesByBranch(draftBranchId || null);
   const displayServicesQuery = usePublicServicesByBranch(config?.branchId ?? null);
 
-  const { isVoiceSupported, voiceEnabled, setVoiceEnabled, announceTicket } =
+  const { isVoiceSupported, voiceEnabled, isAnnouncing, setVoiceEnabled, announceTicket } =
     useTicketAnnouncer();
 
   const requiresConfiguration = isConfigReady && !config;
@@ -142,6 +142,7 @@ export default function Home() {
         errorMessage={displayCalls.error?.message ?? null}
         isVoiceSupported={isVoiceSupported}
         voiceEnabled={voiceEnabled}
+        isAnnouncing={isAnnouncing}
         requiresConfiguration={requiresConfiguration}
         onToggleVoice={handleToggleVoice}
         onReload={handleReload}

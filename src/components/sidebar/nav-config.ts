@@ -1,5 +1,6 @@
 import {
   Building,
+  Clock3,
   Frame,
   Home,
   LifeBuoy,
@@ -52,80 +53,97 @@ export const sidebarData: {
         {
           title: "Dashboard",
           url: "/dashboard",
-          icon: Home
+          icon: Home,
         },
         {
           title: "Usuarios",
           url: "/users",
           icon: Users,
           access: {
-            permissions: ["ver usuarios"]
-          }
+            permissions: ["ver usuarios"],
+          },
         },
         {
           title: "Roles",
           url: "/roles",
           icon: UserCog,
           access: {
-            roles: ["administrador"]
-          }
+            roles: ["administrador"],
+          },
         },
         {
           title: "Permisos",
           url: "/permissions",
           icon: Shield,
           access: {
-            roles: ["administrador"]
-          }
+            roles: ["administrador"],
+          },
         },
-
         {
           title: "Sucursales",
           url: "/branches",
           icon: Building,
           access: {
-            permissions: ["ver sucursales"]
-          }
+            permissions: ["ver sucursales"],
+          },
         },
         {
           title: "Ventanillas",
           url: "/windows",
           icon: Ticket,
           access: {
-            permissions: ["ver ventanillas"]
-          }
+            permissions: ["ver ventanillas"],
+          },
         },
-
         {
           title: "Servicios",
           url: "/services",
           icon: Frame,
           access: {
-            permissions: ["ver servicios"]
-          }
+            permissions: ["ver servicios"],
+          },
         },
-
         {
           title: "Asignaciones",
           url: "/assignments",
           icon: Map,
           access: {
-            permissions: ["ver asignaciones"]
-          }
+            permissions: ["ver asignaciones"],
+          },
         },
         {
           title: "Publicidades",
           url: "/advertisements",
-          icon: Megaphone
+          icon: Megaphone,
+          access: {
+            permissions: ["ver publicidades"]
+          }
         },
-
         {
           title: "Atención al Cliente",
           url: "/customer-service",
           icon: MessageSquare,
+          items: [
+            {
+              title: "Operación",
+              url: "/customer-service",
+              icon: MessageSquare,
+              access: {
+                permissions: ["ver atencion al cliente"],
+              },
+            },
+            {
+              title: "Tiempos de Atención",
+              url: "/customer-service/timelines",
+              icon: Clock3,
+              access: {
+                roles: ["administrador"],
+              },
+            },
+          ],
           access: {
-            permissions: ["ver atencion al cliente"]
-          }
+            permissions: ["ver atencion al cliente"],
+          },
         },
       ],
     },
@@ -134,12 +152,12 @@ export const sidebarData: {
     {
       title: "Support",
       url: "#",
-      icon: LifeBuoy
+      icon: LifeBuoy,
     },
     {
       title: "Feedback",
       url: "#",
-      icon: Send
+      icon: Send,
     },
   ],
 }
