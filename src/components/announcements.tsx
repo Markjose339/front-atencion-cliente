@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -13,6 +13,7 @@ type AnnouncementsProps = {
 
 const NORMAL_VIDEO_VOLUME = 1;
 const DUCKED_VIDEO_VOLUME = 0.1;
+const VIDEO_START_TIMEOUT_MS = 3000;
 
 export function Announcements({ duckAudio = false }: AnnouncementsProps) {
   const { playlist } = useAdvertisementsPlaylistQuery("FULLSCREEN");
@@ -66,6 +67,58 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
 
     videoElement.volume = duckAudio ? DUCKED_VIDEO_VOLUME : NORMAL_VIDEO_VOLUME;
   }, [currentAdvertisement, duckAudio, safeIndex]);
+
+  useEffect(() => {
+    if (currentAdvertisement?.mediaType !== "VIDEO") {
+      return;
+    }
+
+    const videoElement = videoRef.current;
+    if (!videoElement) {
+      return;
+    }
+
+    let cancelled = false;
+    videoElement.muted = false;
+
+    const tryPlay = async () => {
+      try {
+        await videoElement.play();
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        try {
+          // Fallback para navegadores que bloquean autoplay con audio.
+          videoElement.muted = true;
+          await videoElement.play();
+        } catch {
+          if (!cancelled) {
+            goToNext();
+          }
+        }
+      }
+    };
+
+    void tryPlay();
+
+    const startGuard = window.setTimeout(() => {
+      if (cancelled) {
+        return;
+      }
+
+      const stalledAtStart = videoElement.paused && videoElement.currentTime < 0.1;
+      if (stalledAtStart) {
+        goToNext();
+      }
+    }, VIDEO_START_TIMEOUT_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(startGuard);
+    };
+  }, [currentAdvertisement, goToNext, safeIndex]);
 
   if (playlist.isLoading) {
     return (
@@ -126,7 +179,7 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
           }}
           onEnded={goToNext}
           onError={goToNext}
-          className={`h-full w-full object-cover ${transitionClass}`}
+          className={`h-full w-full object-contain ${transitionClass}`}
         />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
@@ -134,15 +187,14 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
           key={`${currentAdvertisement.id}-${safeIndex}`}
           src={currentFileUrl}
           alt={currentAdvertisement.title}
-          className={`h-full w-full object-cover ${transitionClass}`}
+          className={`h-full w-full object-contain ${transitionClass}`}
           loading="eager"
         />
       )}
 
       <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/35 via-transparent to-black/10" />
 
-      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 text-white">
-        <p className="truncate text-sm font-medium">{currentAdvertisement.title}</p>
+      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-end gap-2 text-white">
         <div className="flex items-center gap-1">
           {advertisements.map((item, index) => (
             <span

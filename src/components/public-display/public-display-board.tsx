@@ -154,7 +154,7 @@ export function PublicDisplayBoard({
           </div>
         ) : null}
 
-        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,4fr)_minmax(0,1fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
+        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,7fr)_minmax(0,3fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
           <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-white/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-2">
             <Announcements duckAudio={isAnnouncing && voiceEnabled} />
           </div>
