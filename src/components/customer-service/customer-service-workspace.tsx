@@ -11,6 +11,8 @@ import {
   useCustomerServiceQuery,
   useCustomerServiceWindows,
 } from "@/hooks/use-customer-service";
+import { useNotificationSound } from "@/hooks/use-notification-sound";
+import { useSocket } from "@/hooks/use-socket";
 import {
   CustomerServiceCalledTicket,
   CustomerServiceWindowOption,
@@ -37,9 +39,40 @@ const parsePositiveInt = (value: string | null, fallback: number): number => {
   return Math.trunc(parsed);
 };
 
+type TicketScope = {
+  branchId: string;
+  serviceId: string;
+};
+
+const parseTicketScope = (payload: unknown): TicketScope | null => {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const source = payload as Record<string, unknown>;
+  const nestedPayload =
+    source.ticket && typeof source.ticket === "object"
+      ? (source.ticket as Record<string, unknown>)
+      : source.data && typeof source.data === "object"
+        ? (source.data as Record<string, unknown>)
+        : source;
+
+  const branchId =
+    typeof nestedPayload.branchId === "string" ? nestedPayload.branchId.trim() : "";
+  const serviceId =
+    typeof nestedPayload.serviceId === "string" ? nestedPayload.serviceId.trim() : "";
+
+  if (!branchId || !serviceId) {
+    return null;
+  }
+
+  return { branchId, serviceId };
+};
+
 export function CustomerServiceWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { socket } = useSocket();
 
   const page = parsePositiveInt(searchParams.get("page"), 1);
   const limit = parsePositiveInt(searchParams.get("limit"), 10);
@@ -57,6 +90,7 @@ export function CustomerServiceWorkspace() {
   } = useCustomerServiceMutation();
 
   const [calledTicketState, setCalledTicketState] = useState<CalledTicketState | null>(null);
+  const { playNotification } = useNotificationSound();
 
   const options = useMemo(() => windowsQuery.data ?? [], [windowsQuery.data]);
 
@@ -179,6 +213,34 @@ export function CustomerServiceWorkspace() {
 
     return calledTicketState.ticket;
   }, [backendCalledTicket, calledTicketState, response?.isAttendingTicket, selectedScopeKey]);
+
+  useEffect(() => {
+    if (!socket || !selectedOption) {
+      return;
+    }
+
+    const handleTicketCreated = (payload: unknown) => {
+      const ticketScope = parseTicketScope(payload);
+
+      if (ticketScope) {
+        const isSameScope =
+          ticketScope.branchId === selectedOption.branchId &&
+          ticketScope.serviceId === selectedOption.serviceId;
+
+        if (!isSameScope) {
+          return;
+        }
+      }
+
+      playNotification();
+    };
+
+    socket.on("ticket:created", handleTicketCreated);
+
+    return () => {
+      socket.off("ticket:created", handleTicketCreated);
+    };
+  }, [playNotification, selectedOption, socket]);
 
   const handlePaginationChange = useCallback(
     (pagination: { pageIndex: number; pageSize: number }) => {

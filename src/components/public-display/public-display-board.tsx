@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  BellRing,
   Loader2,
   Moon,
   RefreshCw,
@@ -43,7 +42,6 @@ type PublicDisplayBoardProps = {
 };
 
 export function PublicDisplayBoard({
-  selectedServiceNames,
   tickets,
   isLoading,
   errorMessage,
@@ -85,7 +83,7 @@ export function PublicDisplayBoard({
   return (
     <main className="relative isolate h-dvh w-full overflow-hidden bg-[#f4f8ff] text-[#0C3E63] dark:bg-[#0C3E63] dark:text-[#e9f2ff]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_8%,rgba(32,83,154,0.24),transparent_38%),radial-gradient(circle_at_92%_4%,rgba(253,203,53,0.25),transparent_34%),linear-gradient(175deg,#f7fbff_0%,#e9f1ff_56%,#fff7db_100%)] dark:bg-[radial-gradient(circle_at_8%_8%,rgba(32,83,154,0.45),transparent_38%),radial-gradient(circle_at_92%_4%,rgba(240,224,73,0.2),transparent_34%),linear-gradient(165deg,#0C3E63_0%,#1f3b62_58%,#0C3E63_100%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,69,145,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(17,69,145,0.12)_1px,transparent_1px)] bg-[size:38px_38px] dark:bg-[linear-gradient(rgba(240,224,73,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(240,224,73,0.12)_1px,transparent_1px)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,69,145,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(17,69,145,0.12)_1px,transparent_1px)] bg-size[38px_38px] dark:bg-[linear-gradient(rgba(240,224,73,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(240,224,73,0.12)_1px,transparent_1px)]" />
 
       <div className="relative z-10 flex h-full flex-col">
         {menuVisible ? (
