@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Loader2,
   Moon,
@@ -35,6 +35,7 @@ type PublicDisplayBoardProps = {
   isVoiceSupported: boolean;
   voiceEnabled: boolean;
   isAnnouncing: boolean;
+  highlightedCallKeys: string[];
   requiresConfiguration: boolean;
   onToggleVoice: () => void;
   onReload: () => void;
@@ -48,6 +49,7 @@ export function PublicDisplayBoard({
   isVoiceSupported,
   voiceEnabled,
   isAnnouncing,
+  highlightedCallKeys,
   requiresConfiguration,
   onToggleVoice,
   onReload,
@@ -55,6 +57,7 @@ export function PublicDisplayBoard({
 }: PublicDisplayBoardProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [menuVisible, setMenuVisible] = useState(false);
+  const highlightedKeySet = useMemo(() => new Set(highlightedCallKeys), [highlightedCallKeys]);
 
   const isDarkTheme = resolvedTheme === "dark";
 
@@ -178,14 +181,20 @@ export function PublicDisplayBoard({
 
             {!isLoading && !errorMessage && tickets.length > 0 ? (
               <div className="grid h-full grid-cols-1 gap-3 overflow-auto pr-1 sm:grid-cols-6">
-                {tickets.map((ticket) => (
-                  <ClientTicketDisplay
-                    key={ticket.id}
-                    code={ticket.code}
-                    window={ticket.windowName}
-                    type={ticket.type}
-                  />
-                ))}
+                {tickets.map((ticket) => {
+                  const ticketAlertKey = `${ticket.id}:${ticket.calledAt ?? ticket.createdAt}`;
+                  const isRecentlyCalled = highlightedKeySet.has(ticketAlertKey);
+
+                  return (
+                    <ClientTicketDisplay
+                      key={ticket.id}
+                      code={ticket.code}
+                      window={ticket.windowName}
+                      type={ticket.type}
+                      isRecentlyCalled={isRecentlyCalled}
+                    />
+                  );
+                })}
               </div>
             ) : null}
 

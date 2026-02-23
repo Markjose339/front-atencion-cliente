@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PublicDisplayBoard } from "@/components/public-display/public-display-board";
@@ -18,9 +18,12 @@ import {
 import { usePublicDisplayCalls, usePublicDisplayConfig } from "@/hooks/use-public-display";
 import { usePublicBranches, usePublicServicesByBranch } from "@/hooks/use-public";
 import { useTicketAnnouncer } from "@/hooks/use-ticket-announcer";
+import { PublicDisplayCalledTicket } from "@/types/public-display";
 
 const uniqueIds = (values: string[]): string[] =>
   Array.from(new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)));
+const VISUAL_ALERT_DURATION_MS = 30_000;
+const VISUAL_ALERT_MAX_ITEMS = 20;
 
 export default function Home() {
   const { data: branches = [], isLoading: loadingBranches } = usePublicBranches();
@@ -38,8 +41,64 @@ export default function Home() {
 
   const { isVoiceSupported, voiceEnabled, isAnnouncing, setVoiceEnabled, announceTicket } =
     useTicketAnnouncer();
+  const [highlightedCallKeys, setHighlightedCallKeys] = useState<string[]>([]);
+  const visualAlertTimersRef = useRef<Record<string, number>>({});
 
   const requiresConfiguration = isConfigReady && !config;
+
+  const clearVisualAlertTimer = useCallback((key: string) => {
+    const timerId = visualAlertTimersRef.current[key];
+    if (typeof timerId !== "number") {
+      return;
+    }
+
+    window.clearTimeout(timerId);
+    delete visualAlertTimersRef.current[key];
+  }, []);
+
+  const queueVisualAlert = useCallback(
+    (ticket: PublicDisplayCalledTicket) => {
+      const key = `${ticket.id}:${ticket.calledAt ?? ticket.createdAt}`;
+
+      clearVisualAlertTimer(key);
+
+      setHighlightedCallKeys((previous) => {
+        const withNew = previous.includes(key) ? previous : [key, ...previous];
+        if (withNew.length <= VISUAL_ALERT_MAX_ITEMS) {
+          return withNew;
+        }
+
+        const kept = withNew.slice(0, VISUAL_ALERT_MAX_ITEMS);
+        const removed = withNew.slice(VISUAL_ALERT_MAX_ITEMS);
+        removed.forEach(clearVisualAlertTimer);
+        return kept;
+      });
+
+      visualAlertTimersRef.current[key] = window.setTimeout(() => {
+        setHighlightedCallKeys((previous) => previous.filter((item) => item !== key));
+        delete visualAlertTimersRef.current[key];
+      }, VISUAL_ALERT_DURATION_MS);
+    },
+    [clearVisualAlertTimer],
+  );
+
+  const handleIncomingCall = useCallback(
+    (ticket: PublicDisplayCalledTicket) => {
+      queueVisualAlert(ticket);
+      announceTicket(ticket);
+    },
+    [announceTicket, queueVisualAlert],
+  );
+
+  useEffect(
+    () => () => {
+      Object.values(visualAlertTimersRef.current).forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
+      visualAlertTimersRef.current = {};
+    },
+    [],
+  );
 
   const openSettings = (nextStep?: PublicDisplaySetupStep) => {
     const nextBranchId = config?.branchId ?? "";
@@ -53,7 +112,7 @@ export default function Home() {
     branchId: config?.branchId ?? null,
     serviceIds: config?.serviceIds ?? [],
     maxItems: 12,
-    onIncomingCall: announceTicket,
+    onIncomingCall: handleIncomingCall,
   });
 
   const selectedBranch = useMemo(
@@ -143,6 +202,7 @@ export default function Home() {
         isVoiceSupported={isVoiceSupported}
         voiceEnabled={voiceEnabled}
         isAnnouncing={isAnnouncing}
+        highlightedCallKeys={highlightedCallKeys}
         requiresConfiguration={requiresConfiguration}
         onToggleVoice={handleToggleVoice}
         onReload={handleReload}
