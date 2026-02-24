@@ -15,6 +15,7 @@ import { useNotificationSound } from "@/hooks/use-notification-sound";
 import { useSocket } from "@/hooks/use-socket";
 import {
   CustomerServiceCalledTicket,
+  CustomerServiceHeldTicket,
   CustomerServiceTicket,
   CustomerServiceWindowOption,
 } from "@/types/customer-service";
@@ -41,6 +42,7 @@ const RESUME_CONFLICT_CALLED_ERROR_MESSAGE =
   "No puedes reanudar un ticket en espera mientras tienes uno en estado LLAMADO";
 const RESUME_CONFLICT_ATTENDING_ERROR_MESSAGE =
   "No puedes reanudar un ticket en espera mientras tienes uno en ATENDIENDO";
+const CALL_NEXT_EMPTY_SERVICE_MESSAGE = "No hay tickets disponibles para tu servicio";
 
 const parsePositiveInt = (value: string | null, fallback: number): number => {
   const parsed = Number(value);
@@ -80,6 +82,18 @@ const parseTicketScope = (payload: unknown): TicketScope | null => {
   }
 
   return { branchId, serviceId };
+};
+
+const isCallNextEmptyServiceError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  const status = typeof record.status === "number" ? record.status : null;
+  const message = getCustomerServiceErrorText(error, "");
+
+  return status === 404 && message === CALL_NEXT_EMPTY_SERVICE_MESSAGE;
 };
 
 export function CustomerServiceWorkspace() {
@@ -337,28 +351,30 @@ export function CustomerServiceWorkspace() {
       return;
     }
 
-    toast.promise(
-      callNextTicket.mutateAsync({
+    try {
+      const ticket = await callNextTicket.mutateAsync({
         branchId: selectedOption.branchId,
         serviceId: selectedOption.serviceId,
-      }),
-      {
-        loading: "Llamando siguiente ticket...",
-        success: (ticket) => {
-          if (!ticket) {
-            return "No hay tickets pendientes";
-          }
+      });
 
-          setCalledTicketState({
-            scopeKey: `${ticket.branchId}:${ticket.serviceId}`,
-            ticket,
-          });
-          return `Ticket "${ticket.code}" llamado correctamente`;
-        },
-        error: (error) =>
-          getCustomerServiceErrorText(error, "No se pudo llamar al siguiente ticket"),
-      },
-    );
+      if (!ticket) {
+        toast.info("No hay tickets pendientes");
+        return;
+      }
+
+      setCalledTicketState({
+        scopeKey: `${ticket.branchId}:${ticket.serviceId}`,
+        ticket,
+      });
+      toast.success(`Ticket "${ticket.code}" llamado correctamente`);
+    } catch (error) {
+      if (isCallNextEmptyServiceError(error)) {
+        toast.info(CALL_NEXT_EMPTY_SERVICE_MESSAGE);
+        return;
+      }
+
+      toast.error(getCustomerServiceErrorText(error, "No se pudo llamar al siguiente ticket"));
+    }
   };
 
   const onRecallByTicketId = useCallback(
@@ -412,7 +428,57 @@ export function CustomerServiceWorkspace() {
     await onRecallByTicketId(calledTicket.id);
   };
 
-  const onRecallHeldTicket = async (ticket: CustomerServiceTicket) => {
+  const selectHeldTicketService = useCallback(
+    (ticket: CustomerServiceHeldTicket): boolean => {
+      if (!selectedOption) {
+        return false;
+      }
+
+      const isSameService =
+        ticket.branchId === selectedOption.branchId &&
+        ticket.serviceId === selectedOption.serviceId;
+
+      if (isSameService) {
+        return true;
+      }
+
+      const matchingOption = options.find(
+        (option) =>
+          option.branchId === ticket.branchId && option.serviceId === ticket.serviceId,
+      );
+
+      if (!matchingOption) {
+        toast.error(
+          `No tienes una ventanilla asignada para el servicio "${ticket.serviceName}"`,
+        );
+        return false;
+      }
+
+      updateURL({
+        page: 1,
+        limit,
+        search: "",
+        branchId: matchingOption.branchId,
+        serviceId: matchingOption.serviceId,
+      });
+
+      return false;
+    },
+    [selectedOption, options, updateURL, limit],
+  );
+
+  const onSelectHeldTicket = useCallback(
+    (ticket: CustomerServiceHeldTicket) => {
+      selectHeldTicketService(ticket);
+    },
+    [selectHeldTicketService],
+  );
+
+  const onRecallHeldTicket = async (ticket: CustomerServiceHeldTicket) => {
+    if (!selectHeldTicketService(ticket)) {
+      return;
+    }
+
     if (calledTicket && calledTicket.id !== ticket.id) {
       toast.error(RECALL_CONFLICT_CALLED_ERROR_MESSAGE);
       return;
@@ -477,7 +543,11 @@ export function CustomerServiceWorkspace() {
     await onStartByTicketId(calledTicket.id);
   };
 
-  const onResumeHeldAttention = async (ticket: CustomerServiceTicket) => {
+  const onResumeHeldAttention = async (ticket: CustomerServiceHeldTicket) => {
+    if (!selectHeldTicketService(ticket)) {
+      return;
+    }
+
     if (calledTicket && calledTicket.id !== ticket.id) {
       toast.error(RESUME_CONFLICT_CALLED_ERROR_MESSAGE);
       return;
@@ -720,6 +790,7 @@ export function CustomerServiceWorkspace() {
         recallBlockedByAttendingMessage={recallBlockedByAttendingMessage}
         resumeBlockedByCalledMessage={resumeBlockedByCalledMessage}
         resumeBlockedByAttendingMessage={resumeBlockedByAttendingMessage}
+        onSelectTicket={onSelectHeldTicket}
         onRecall={onRecallHeldTicket}
         onResumeAttention={onResumeHeldAttention}
       />

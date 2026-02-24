@@ -24,6 +24,10 @@ export interface CustomerServiceTicket {
   createdAt: string;
 }
 
+export interface CustomerServiceHeldTicket extends CustomerServiceTicket {
+  serviceName: string;
+}
+
 export interface CustomerServiceTimelineDuration {
   milliseconds: number;
   seconds: number;
@@ -52,7 +56,7 @@ export interface CustomerServiceTimelineTicket {
 
 export interface CustomerServiceQueueResponse {
   data: CustomerServiceTicket[];
-  heldTickets: CustomerServiceTicket[];
+  heldTickets: CustomerServiceHeldTicket[];
   meta: ApiResponse<CustomerServiceTicket>["meta"];
   isAttendingTicket: boolean;
   calledTicket: CustomerServiceCalledTicket | null;

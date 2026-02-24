@@ -1,12 +1,13 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CustomerServiceTicket } from "@/types/customer-service";
+import { CustomerServiceHeldTicket } from "@/types/customer-service";
 
 import { CustomerServiceStatusBadge } from "./customer-service-status-badge";
 import { formatCustomerServiceDate } from "./customer-service-utils";
 
 interface CustomerServiceHeldTicketsProps {
-  tickets: CustomerServiceTicket[];
+  tickets: CustomerServiceHeldTicket[];
   maxHeldTickets: number;
   loadingRecallById: Record<string, boolean>;
   loadingStartById: Record<string, boolean>;
@@ -17,12 +18,14 @@ interface CustomerServiceHeldTicketsProps {
   recallBlockedByAttendingMessage: string | null;
   resumeBlockedByCalledMessage: string | null;
   resumeBlockedByAttendingMessage: string | null;
-  onRecall: (ticket: CustomerServiceTicket) => void;
-  onResumeAttention: (ticket: CustomerServiceTicket) => void;
+  onSelectTicket: (ticket: CustomerServiceHeldTicket) => void;
+  onRecall: (ticket: CustomerServiceHeldTicket) => void;
+  onResumeAttention: (ticket: CustomerServiceHeldTicket) => void;
 }
 
 export function CustomerServiceHeldTickets({
   tickets,
+  maxHeldTickets,
   loadingRecallById,
   loadingStartById,
   activeCalledTicketId,
@@ -32,13 +35,17 @@ export function CustomerServiceHeldTickets({
   recallBlockedByAttendingMessage,
   resumeBlockedByCalledMessage,
   resumeBlockedByAttendingMessage,
+  onSelectTicket,
   onRecall,
   onResumeAttention,
 }: CustomerServiceHeldTicketsProps) {
   return (
     <section className="rounded-xl border bg-background shadow-sm">
       <div className="flex flex-col gap-2 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-sm font-semibold">Tickets en espera</h2>
+        <h2 className="text-sm font-semibold">Tickets en espera del operador</h2>
+        <Badge variant={tickets.length >= maxHeldTickets ? "destructive" : "secondary"}>
+          En espera: {tickets.length}/{maxHeldTickets}
+        </Badge>
       </div>
 
       <div className="space-y-3 p-4">
@@ -84,11 +91,23 @@ export function CustomerServiceHeldTickets({
             return (
               <article
                 key={ticket.id}
-                className="flex flex-col gap-3 rounded-lg border p-3 lg:flex-row lg:items-center lg:justify-between"
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectTicket(ticket)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectTicket(ticket);
+                  }
+                }}
+                className="flex cursor-pointer flex-col gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex-row lg:items-center lg:justify-between"
               >
                 <div className="space-y-1 text-sm">
                   <div>
                     Ticket en espera: <strong>{ticket.code}</strong>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Servicio: <strong>{ticket.serviceName}</strong>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Referencia: {formatCustomerServiceDate(waitingReference)}
@@ -106,7 +125,10 @@ export function CustomerServiceHeldTickets({
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => onRecall(ticket)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onRecall(ticket);
+                            }}
                             disabled={disableRecallButton}
                           >
                             {isTicketRecalling ? "Re-llamando..." : "Re-llamar"}
@@ -120,7 +142,10 @@ export function CustomerServiceHeldTickets({
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => onRecall(ticket)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onRecall(ticket);
+                      }}
                       disabled={disableRecallButton}
                     >
                       {isTicketRecalling ? "Re-llamando..." : "Re-llamar"}
@@ -134,7 +159,10 @@ export function CustomerServiceHeldTickets({
                           <Button
                             type="button"
                             size="sm"
-                            onClick={() => onResumeAttention(ticket)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onResumeAttention(ticket);
+                            }}
                             disabled={disableResumeButton}
                           >
                             {isTicketStarting ? "Reanudando..." : "Reanudar atencion"}
@@ -147,7 +175,10 @@ export function CustomerServiceHeldTickets({
                     <Button
                       type="button"
                       size="sm"
-                      onClick={() => onResumeAttention(ticket)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onResumeAttention(ticket);
+                      }}
                       disabled={disableResumeButton}
                     >
                       {isTicketStarting ? "Reanudando..." : "Reanudar atencion"}
