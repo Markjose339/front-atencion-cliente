@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CustomerServiceTicket } from "@/types/customer-service";
@@ -14,7 +13,8 @@ interface CustomerServiceHeldTicketsProps {
   activeCalledTicketId: string | null;
   activeAttendingTicketId: string | null;
   isAttendingTicket: boolean;
-  recallBlockedMessage: string | null;
+  recallBlockedByCalledMessage: string | null;
+  recallBlockedByAttendingMessage: string | null;
   resumeBlockedByCalledMessage: string | null;
   resumeBlockedByAttendingMessage: string | null;
   onRecall: (ticket: CustomerServiceTicket) => void;
@@ -23,13 +23,13 @@ interface CustomerServiceHeldTicketsProps {
 
 export function CustomerServiceHeldTickets({
   tickets,
-  maxHeldTickets,
   loadingRecallById,
   loadingStartById,
   activeCalledTicketId,
   activeAttendingTicketId,
   isAttendingTicket,
-  recallBlockedMessage,
+  recallBlockedByCalledMessage,
+  recallBlockedByAttendingMessage,
   resumeBlockedByCalledMessage,
   resumeBlockedByAttendingMessage,
   onRecall,
@@ -39,9 +39,6 @@ export function CustomerServiceHeldTickets({
     <section className="rounded-xl border bg-background shadow-sm">
       <div className="flex flex-col gap-2 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-sm font-semibold">Tickets en espera</h2>
-        <Badge variant={tickets.length >= maxHeldTickets ? "destructive" : "secondary"}>
-          En espera: {tickets.length}/{maxHeldTickets}
-        </Badge>
       </div>
 
       <div className="space-y-3 p-4">
@@ -55,19 +52,29 @@ export function CustomerServiceHeldTickets({
             const isTicketStarting = Boolean(loadingStartById[ticket.id]);
             const isRecallBlockedByCalledTicket =
               Boolean(activeCalledTicketId) && activeCalledTicketId !== ticket.id;
+            const isRecallBlockedByAttendingTicket =
+              (Boolean(activeAttendingTicketId) && activeAttendingTicketId !== ticket.id) ||
+              isAttendingTicket;
             const isResumeBlockedByCalledTicket =
               Boolean(activeCalledTicketId) && activeCalledTicketId !== ticket.id;
             const isResumeBlockedByAttendingTicket =
               (Boolean(activeAttendingTicketId) && activeAttendingTicketId !== ticket.id) ||
               isAttendingTicket;
             const disableRecallButton =
-              isTicketRecalling || isTicketStarting || isRecallBlockedByCalledTicket;
+              isTicketRecalling ||
+              isTicketStarting ||
+              isRecallBlockedByCalledTicket ||
+              isRecallBlockedByAttendingTicket;
             const disableResumeButton =
               isTicketStarting ||
               isTicketRecalling ||
               isResumeBlockedByCalledTicket ||
               isResumeBlockedByAttendingTicket;
-            const recallTooltip = isRecallBlockedByCalledTicket ? recallBlockedMessage : null;
+            const recallTooltip = isRecallBlockedByAttendingTicket
+              ? recallBlockedByAttendingMessage
+              : isRecallBlockedByCalledTicket
+                ? recallBlockedByCalledMessage
+                : null;
             const resumeTooltip = isResumeBlockedByAttendingTicket
               ? resumeBlockedByAttendingMessage
               : isResumeBlockedByCalledTicket
