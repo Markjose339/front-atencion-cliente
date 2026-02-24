@@ -13,21 +13,21 @@ type PublicJoinAck = {
   message?: string;
 };
 
-type AuthReadyAck = {
-  ok: true;
-  userId: string;
-};
-
 let socket: Socket | null = null;
 let operatorRoomsRegistered = false;
-
-// ✅ bandera por socket (evita carrera)
 let authReady = false;
 
 const getWsUrl = (): string => {
-  const wsUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!wsUrl) throw new Error("NEXT_PUBLIC_API_URL is not defined");
-  return wsUrl;
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!rawApiUrl) throw new Error("NEXT_PUBLIC_API_URL is not defined");
+
+  const normalized = rawApiUrl.replace(/\/+$/, "");
+
+  if (normalized.endsWith("/api")) {
+    return normalized.slice(0, -4);
+  }
+
+  return normalized;
 };
 
 const waitForSocketConnection = async (
@@ -81,7 +81,7 @@ const waitForAuthReady = async (
       targetSocket.off("auth:ready", onReady);
     };
 
-    const onReady = (_payload: AuthReadyAck) => {
+    const onReady = () => {
       authReady = true;
       cleanup();
       resolve();
@@ -137,13 +137,16 @@ export function getSocket(): Socket {
     socket.on("disconnect", resetFlags);
     socket.on("connect_error", resetFlags);
 
-    // ✅ cuando el backend diga listo, marcamos
     socket.on("auth:ready", () => {
       authReady = true;
     });
   }
 
   return socket;
+}
+
+export function isSocketAuthReady(): boolean {
+  return authReady;
 }
 
 export async function ensureOperatorQueueRegistration(
@@ -153,7 +156,6 @@ export async function ensureOperatorQueueRegistration(
 
   if (operatorRoomsRegistered) return [];
 
-  // ✅ ESPERA A QUE EL BACKEND TERMINE AUTH
   await waitForAuthReady(targetSocket).catch(() => undefined);
 
   const response = await emitWithAck<QueueRegisterAck>(
@@ -161,7 +163,6 @@ export async function ensureOperatorQueueRegistration(
     "queue:register",
   );
 
-  // ✅ si por alguna razón aún cae en carrera, reintenta 1 vez
   if (!response?.ok && response.message === "No autenticado") {
     await new Promise((r) => setTimeout(r, 200));
     const retry = await emitWithAck<QueueRegisterAck>(
