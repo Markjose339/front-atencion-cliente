@@ -4,6 +4,7 @@ import { TicketStatus } from "@/types/customer-service";
 const STATUS_LABELS: Record<TicketStatus, string> = {
   PENDIENTE: "Pendiente",
   LLAMADO: "Llamado",
+  ESPERA: "En espera",
   ATENDIENDO: "Atendiendo",
   FINALIZADO: "Finalizado",
   CANCELADO: "Cancelado",
@@ -15,6 +16,7 @@ const STATUS_VARIANTS: Record<
 > = {
   PENDIENTE: "outline",
   LLAMADO: "secondary",
+  ESPERA: "secondary",
   ATENDIENDO: "default",
   FINALIZADO: "outline",
   CANCELADO: "destructive",

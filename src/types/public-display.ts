@@ -24,6 +24,7 @@ export interface PublicDisplayCalledTicket {
 export type PublicDisplaySocketEventName =
   | "ticket:called"
   | "ticket:recalled"
+  | "ticket:held"
   | "ticket:updated"
   | "ticket:started"
   | "ticket:finished"

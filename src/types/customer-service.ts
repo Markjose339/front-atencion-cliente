@@ -3,6 +3,7 @@ import { ApiResponse } from "@/types/api-response";
 export type TicketStatus =
   | "PENDIENTE"
   | "LLAMADO"
+  | "ESPERA"
   | "ATENDIENDO"
   | "FINALIZADO"
   | "CANCELADO";
@@ -49,9 +50,12 @@ export interface CustomerServiceTimelineTicket {
   fromAttentionStartToFinish: CustomerServiceTimelineDuration | null;
 }
 
-export interface CustomerServiceQueueResponse extends ApiResponse<CustomerServiceTicket> {
+export interface CustomerServiceQueueResponse {
+  data: CustomerServiceTicket[];
+  heldTickets: CustomerServiceTicket[];
+  meta: ApiResponse<CustomerServiceTicket>["meta"];
   isAttendingTicket: boolean;
-  calledTicket?: CustomerServiceCalledTicket | null;
+  calledTicket: CustomerServiceCalledTicket | null;
 }
 
 export interface CustomerServiceCalledTicket {

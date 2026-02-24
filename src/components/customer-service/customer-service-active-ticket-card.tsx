@@ -15,10 +15,13 @@ interface CustomerServiceActiveTicketCardProps {
   isAttendingTicket: boolean;
   onRecall: () => void;
   onStartAttention: () => void;
+  onHoldAttention: () => void;
   onCancelCalled: () => void;
   onFinishAttention: () => void;
   recalling: boolean;
   starting: boolean;
+  holding: boolean;
+  disableHoldAttention: boolean;
   cancelling: boolean;
   finishing: boolean;
 }
@@ -29,10 +32,13 @@ export function CustomerServiceActiveTicketCard({
   isAttendingTicket,
   onRecall,
   onStartAttention,
+  onHoldAttention,
   onCancelCalled,
   onFinishAttention,
   recalling,
   starting,
+  holding,
+  disableHoldAttention,
   cancelling,
   finishing,
 }: CustomerServiceActiveTicketCardProps) {
@@ -101,14 +107,25 @@ export function CustomerServiceActiveTicketCard({
           )}
 
           {attendingTicket && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={onFinishAttention}
-              disabled={finishing}
-            >
-              {finishing ? "Finalizando..." : "Finalizar atencion"}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onHoldAttention}
+                disabled={holding || finishing || disableHoldAttention}
+              >
+                {holding ? "Poniendo en espera..." : "Poner en espera"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={onFinishAttention}
+                disabled={finishing || holding}
+              >
+                {finishing ? "Finalizando..." : "Finalizar atencion"}
+              </Button>
+            </>
           )}
         </div>
       </div>

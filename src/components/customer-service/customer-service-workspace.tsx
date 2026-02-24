@@ -2,7 +2,7 @@
 
 import { AlertCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,13 @@ import { useNotificationSound } from "@/hooks/use-notification-sound";
 import { useSocket } from "@/hooks/use-socket";
 import {
   CustomerServiceCalledTicket,
+  CustomerServiceTicket,
   CustomerServiceWindowOption,
 } from "@/types/customer-service";
 
 import { CustomerServiceActiveTicketCard } from "./customer-service-active-ticket-card";
 import { CustomerServiceHeader } from "./customer-service-header";
+import { CustomerServiceHeldTickets } from "./customer-service-held-tickets";
 import { CustomerServiceTable } from "./customer-service-table";
 import { getCustomerServiceErrorText } from "./customer-service-utils";
 import { CustomerServiceWindowSelector } from "./customer-service-window-selector";
@@ -28,6 +30,15 @@ type CalledTicketState = {
   scopeKey: string;
   ticket: CustomerServiceCalledTicket;
 };
+
+const MAX_HELD_TICKETS = 3;
+const HOLD_LIMIT_ERROR_MESSAGE = "No puedes tener mas de 3 tickets en espera";
+const RECALL_CONFLICT_ERROR_MESSAGE =
+  "No puedes re-llamar otro ticket mientras tienes uno en estado LLAMADO";
+const RESUME_CONFLICT_CALLED_ERROR_MESSAGE =
+  "No puedes reanudar un ticket en espera mientras tienes uno en estado LLAMADO";
+const RESUME_CONFLICT_ATTENDING_ERROR_MESSAGE =
+  "No puedes reanudar un ticket en espera mientras tienes uno en ATENDIENDO";
 
 const parsePositiveInt = (value: string | null, fallback: number): number => {
   const parsed = Number(value);
@@ -69,6 +80,16 @@ const parseTicketScope = (payload: unknown): TicketScope | null => {
   return { branchId, serviceId };
 };
 
+const isHoldLimitError = (message: string): boolean =>
+  message.toLocaleLowerCase("es").includes(
+    HOLD_LIMIT_ERROR_MESSAGE.toLocaleLowerCase("es"),
+  );
+
+const isRecallConflictError = (message: string): boolean =>
+  message.toLocaleLowerCase("es").includes(
+    RECALL_CONFLICT_ERROR_MESSAGE.toLocaleLowerCase("es"),
+  );
+
 export function CustomerServiceWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,11 +106,16 @@ export function CustomerServiceWorkspace() {
     callNextTicket,
     recallTicket,
     startTicketAttention,
+    holdTicket,
     finishTicketAttention,
     cancelTicket,
   } = useCustomerServiceMutation();
 
   const [calledTicketState, setCalledTicketState] = useState<CalledTicketState | null>(null);
+  const [loadingRecallById, setLoadingRecallById] = useState<Record<string, boolean>>({});
+  const [loadingStartById, setLoadingStartById] = useState<Record<string, boolean>>({});
+  const recallInFlightRef = useRef<Set<string>>(new Set());
+  const startInFlightRef = useRef<Set<string>>(new Set());
   const { playNotification } = useNotificationSound();
 
   const options = useMemo(() => windowsQuery.data ?? [], [windowsQuery.data]);
@@ -178,6 +204,11 @@ export function CustomerServiceWorkspace() {
     () => response?.data.find((ticket) => ticket.status === "ATENDIENDO") ?? null,
     [response?.data],
   );
+  const heldTickets = useMemo(
+    () => response?.heldTickets ?? [],
+    [response?.heldTickets],
+  );
+  const isHeldTicketsLimitReached = heldTickets.length >= MAX_HELD_TICKETS;
 
   const backendCalledTicket = useMemo(() => {
     const ticket = response?.calledTicket;
@@ -291,6 +322,43 @@ export function CustomerServiceWorkspace() {
     });
   }, [updateURL, limit]);
 
+  const refreshQueue = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  const getHoldErrorText = useCallback((error: unknown) => {
+    const text = getCustomerServiceErrorText(error, "No se pudo poner el ticket en espera");
+
+    if (isHoldLimitError(text)) {
+      return HOLD_LIMIT_ERROR_MESSAGE;
+    }
+
+    return text;
+  }, []);
+
+  const getRecallErrorText = useCallback((error: unknown) => {
+    const text = getCustomerServiceErrorText(error, "No se pudo re-llamar");
+
+    if (isRecallConflictError(text)) {
+      return RECALL_CONFLICT_ERROR_MESSAGE;
+    }
+
+    return text;
+  }, []);
+
+  const getStartErrorText = useCallback((error: unknown) => {
+    const text = getCustomerServiceErrorText(error, "No se pudo iniciar la atencion");
+
+    if (
+      text === RESUME_CONFLICT_CALLED_ERROR_MESSAGE ||
+      text === RESUME_CONFLICT_ATTENDING_ERROR_MESSAGE
+    ) {
+      return text;
+    }
+
+    return text;
+  }, []);
+
   const onCallNext = async () => {
     if (!selectedOption) {
       return;
@@ -320,38 +388,157 @@ export function CustomerServiceWorkspace() {
     );
   };
 
+  const onRecallByTicketId = useCallback(
+    async (ticketId: string) => {
+      if (recallInFlightRef.current.has(ticketId)) {
+        return;
+      }
+
+      recallInFlightRef.current.add(ticketId);
+      setLoadingRecallById((previous) => ({
+        ...previous,
+        [ticketId]: true,
+      }));
+
+      const mutationPromise = (async () => {
+        const data = await recallTicket.mutateAsync(ticketId);
+        setCalledTicketState({
+          scopeKey: `${data.ticket.branchId}:${data.ticket.serviceId}`,
+          ticket: data.ticket,
+        });
+        await refreshQueue();
+        return data;
+      })();
+
+      toast.promise(mutationPromise, {
+        loading: "Re-llamando ticket...",
+        success: (data) => data.message,
+        error: (error) => getRecallErrorText(error),
+      });
+
+      try {
+        await mutationPromise;
+      } catch {
+      } finally {
+        recallInFlightRef.current.delete(ticketId);
+        setLoadingRecallById((previous) => {
+          const next = { ...previous };
+          delete next[ticketId];
+          return next;
+        });
+      }
+    },
+    [recallTicket, refreshQueue, getRecallErrorText],
+  );
+
   const onRecallTicket = async () => {
     if (!calledTicket) {
       return;
     }
 
-    toast.promise(recallTicket.mutateAsync(calledTicket.id), {
-      loading: "Re-llamando ticket...",
-      success: (data) => {
-        setCalledTicketState({
-          scopeKey: `${data.ticket.branchId}:${data.ticket.serviceId}`,
-          ticket: data.ticket,
-        });
-        return data.message;
-      },
-      error: (error) => getCustomerServiceErrorText(error, "No se pudo re-llamar"),
-    });
+    await onRecallByTicketId(calledTicket.id);
   };
+
+  const onRecallHeldTicket = async (ticket: CustomerServiceTicket) => {
+    if (calledTicket && calledTicket.id !== ticket.id) {
+      toast.error(RECALL_CONFLICT_ERROR_MESSAGE);
+      return;
+    }
+
+    await onRecallByTicketId(ticket.id);
+  };
+
+  const onStartByTicketId = useCallback(
+    async (ticketId: string) => {
+      if (startInFlightRef.current.has(ticketId)) {
+        return;
+      }
+
+      startInFlightRef.current.add(ticketId);
+      setLoadingStartById((previous) => ({
+        ...previous,
+        [ticketId]: true,
+      }));
+
+      const mutationPromise = (async () => {
+        const data = await startTicketAttention.mutateAsync(ticketId);
+        setCalledTicketState(null);
+        await refreshQueue();
+        return data;
+      })();
+
+      toast.promise(mutationPromise, {
+        loading: "Iniciando atencion...",
+        success: (data) => data.message,
+        error: (error) => getStartErrorText(error),
+      });
+
+      try {
+        await mutationPromise;
+      } catch {
+      } finally {
+        startInFlightRef.current.delete(ticketId);
+        setLoadingStartById((previous) => {
+          const next = { ...previous };
+          delete next[ticketId];
+          return next;
+        });
+      }
+    },
+    [startTicketAttention, refreshQueue, getStartErrorText],
+  );
 
   const onStartAttention = async () => {
     if (!calledTicket) {
       return;
     }
 
-    toast.promise(startTicketAttention.mutateAsync(calledTicket.id), {
-      loading: "Iniciando atencion...",
-      success: (data) => {
-        setCalledTicketState(null);
-        return data.message;
-      },
-      error: (error) =>
-        getCustomerServiceErrorText(error, "No se pudo iniciar la atencion"),
+    await onStartByTicketId(calledTicket.id);
+  };
+
+  const onResumeHeldAttention = async (ticket: CustomerServiceTicket) => {
+    if (calledTicket && calledTicket.id !== ticket.id) {
+      toast.error(RESUME_CONFLICT_CALLED_ERROR_MESSAGE);
+      return;
+    }
+
+    if (
+      (currentAttendingTicket && currentAttendingTicket.id !== ticket.id) ||
+      response?.isAttendingTicket
+    ) {
+      toast.error(RESUME_CONFLICT_ATTENDING_ERROR_MESSAGE);
+      return;
+    }
+
+    await onStartByTicketId(ticket.id);
+  };
+
+  const onHoldAttention = async () => {
+    if (!currentAttendingTicket) {
+      return;
+    }
+
+    if (isHeldTicketsLimitReached) {
+      toast.error(HOLD_LIMIT_ERROR_MESSAGE);
+      return;
+    }
+
+    const mutationPromise = (async () => {
+      const data = await holdTicket.mutateAsync(currentAttendingTicket.id);
+      setCalledTicketState(null);
+      await refreshQueue();
+      return data;
+    })();
+
+    toast.promise(mutationPromise, {
+      loading: "Poniendo ticket en espera...",
+      success: (data) => data.message,
+      error: (error) => getHoldErrorText(error),
     });
+
+    try {
+      await mutationPromise;
+    } catch {}
   };
 
   const onCancelCalled = async () => {
@@ -466,6 +653,21 @@ export function CustomerServiceWorkspace() {
     Boolean(currentAttendingTicket) ||
     Boolean(response?.isAttendingTicket);
 
+  const hasActiveCalledTicket = Boolean(calledTicket);
+  const hasActiveAttendingTicket =
+    Boolean(currentAttendingTicket) || Boolean(response?.isAttendingTicket);
+
+  const recallBlockedMessage = calledTicket
+    ? "Ya hay un ticket en estado LLAMADO. Inicia su atencion o cancelalo antes de re-llamar otro."
+    : null;
+  const resumeBlockedByCalledMessage = hasActiveCalledTicket
+    ? "Ya hay un ticket en estado LLAMADO. Inicia su atencion o cancelalo antes de reanudar otro."
+    : null;
+  const resumeBlockedByAttendingMessage = hasActiveAttendingTicket
+    ? "Ya tienes un ticket en atencion. Finalizalo antes de reanudar otro ticket."
+    : null;
+  const calledTicketStartLoading = calledTicket ? Boolean(loadingStartById[calledTicket.id]) : false;
+
   return (
     <div className="space-y-6">
       <CustomerServiceHeader
@@ -483,12 +685,30 @@ export function CustomerServiceWorkspace() {
         isAttendingTicket={Boolean(response?.isAttendingTicket)}
         onRecall={onRecallTicket}
         onStartAttention={onStartAttention}
+        onHoldAttention={onHoldAttention}
         onCancelCalled={onCancelCalled}
         onFinishAttention={onFinishAttention}
         recalling={recallTicket.isPending}
-        starting={startTicketAttention.isPending}
+        starting={calledTicketStartLoading}
+        holding={holdTicket.isPending}
+        disableHoldAttention={isHeldTicketsLimitReached}
         cancelling={cancelTicket.isPending}
         finishing={finishTicketAttention.isPending}
+      />
+
+      <CustomerServiceHeldTickets
+        tickets={heldTickets}
+        maxHeldTickets={MAX_HELD_TICKETS}
+        loadingRecallById={loadingRecallById}
+        loadingStartById={loadingStartById}
+        activeCalledTicketId={calledTicket?.id ?? null}
+        activeAttendingTicketId={currentAttendingTicket?.id ?? null}
+        isAttendingTicket={Boolean(response?.isAttendingTicket)}
+        recallBlockedMessage={recallBlockedMessage}
+        resumeBlockedByCalledMessage={resumeBlockedByCalledMessage}
+        resumeBlockedByAttendingMessage={resumeBlockedByAttendingMessage}
+        onRecall={onRecallHeldTicket}
+        onResumeAttention={onResumeHeldAttention}
       />
 
       <CustomerServiceTable
