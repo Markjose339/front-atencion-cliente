@@ -4,6 +4,7 @@ const ticketTypeSchema = z.enum(["REGULAR", "PREFERENCIAL"]);
 const ticketStatusSchema = z.enum([
   "PENDIENTE",
   "LLAMADO",
+  "ESPERA",
   "ATENDIENDO",
   "FINALIZADO",
   "CANCELADO",

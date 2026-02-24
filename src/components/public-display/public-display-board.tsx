@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  BellRing,
   Loader2,
   Moon,
   RefreshCw,
@@ -36,6 +35,7 @@ type PublicDisplayBoardProps = {
   isVoiceSupported: boolean;
   voiceEnabled: boolean;
   isAnnouncing: boolean;
+  highlightedCallKeys: string[];
   requiresConfiguration: boolean;
   onToggleVoice: () => void;
   onReload: () => void;
@@ -43,13 +43,13 @@ type PublicDisplayBoardProps = {
 };
 
 export function PublicDisplayBoard({
-  selectedServiceNames,
   tickets,
   isLoading,
   errorMessage,
   isVoiceSupported,
   voiceEnabled,
   isAnnouncing,
+  highlightedCallKeys,
   requiresConfiguration,
   onToggleVoice,
   onReload,
@@ -57,6 +57,7 @@ export function PublicDisplayBoard({
 }: PublicDisplayBoardProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [menuVisible, setMenuVisible] = useState(false);
+  const highlightedKeySet = useMemo(() => new Set(highlightedCallKeys), [highlightedCallKeys]);
 
   const isDarkTheme = resolvedTheme === "dark";
 
@@ -85,7 +86,7 @@ export function PublicDisplayBoard({
   return (
     <main className="relative isolate h-dvh w-full overflow-hidden bg-[#f4f8ff] text-[#0C3E63] dark:bg-[#0C3E63] dark:text-[#e9f2ff]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_8%,rgba(32,83,154,0.24),transparent_38%),radial-gradient(circle_at_92%_4%,rgba(253,203,53,0.25),transparent_34%),linear-gradient(175deg,#f7fbff_0%,#e9f1ff_56%,#fff7db_100%)] dark:bg-[radial-gradient(circle_at_8%_8%,rgba(32,83,154,0.45),transparent_38%),radial-gradient(circle_at_92%_4%,rgba(240,224,73,0.2),transparent_34%),linear-gradient(165deg,#0C3E63_0%,#1f3b62_58%,#0C3E63_100%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,69,145,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(17,69,145,0.12)_1px,transparent_1px)] bg-[size:38px_38px] dark:bg-[linear-gradient(rgba(240,224,73,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(240,224,73,0.12)_1px,transparent_1px)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,69,145,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(17,69,145,0.12)_1px,transparent_1px)] bg-size[38px_38px] dark:bg-[linear-gradient(rgba(240,224,73,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(240,224,73,0.12)_1px,transparent_1px)]" />
 
       <div className="relative z-10 flex h-full flex-col">
         {menuVisible ? (
@@ -156,7 +157,7 @@ export function PublicDisplayBoard({
           </div>
         ) : null}
 
-        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,4fr)_minmax(0,1fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
+        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,7fr)_minmax(0,3fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
           <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-white/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-2">
             <Announcements duckAudio={isAnnouncing && voiceEnabled} />
           </div>
@@ -180,14 +181,20 @@ export function PublicDisplayBoard({
 
             {!isLoading && !errorMessage && tickets.length > 0 ? (
               <div className="grid h-full grid-cols-1 gap-3 overflow-auto pr-1 sm:grid-cols-6">
-                {tickets.map((ticket) => (
-                  <ClientTicketDisplay
-                    key={ticket.id}
-                    code={ticket.code}
-                    window={ticket.windowName}
-                    type={ticket.type}
-                  />
-                ))}
+                {tickets.map((ticket) => {
+                  const ticketAlertKey = `${ticket.id}:${ticket.calledAt ?? ticket.createdAt}`;
+                  const isRecentlyCalled = highlightedKeySet.has(ticketAlertKey);
+
+                  return (
+                    <ClientTicketDisplay
+                      key={ticket.id}
+                      code={ticket.code}
+                      window={ticket.windowName}
+                      type={ticket.type}
+                      isRecentlyCalled={isRecentlyCalled}
+                    />
+                  );
+                })}
               </div>
             ) : null}
 

@@ -1,8 +1,13 @@
-const API_URL: string | undefined = process.env.NEXT_PUBLIC_API_URL;
+const RAW_API_URL: string | undefined = process.env.NEXT_PUBLIC_API_URL?.trim();
 
-if (!API_URL) {
-  throw new Error('NEXT_PUBLIC_API_URL is not defined');
+if (!RAW_API_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is not defined");
 }
+
+const NORMALIZED_API_URL = RAW_API_URL.replace(/\/+$/, "");
+const API_BASE_URL = NORMALIZED_API_URL.endsWith("/api")
+  ? NORMALIZED_API_URL
+  : `${NORMALIZED_API_URL}/api`;
 
 type ApiError = {
   status: number;
@@ -21,11 +26,14 @@ let refreshQueue: RefreshQueueCallback[] = [];
 
 const timeoutFetch = (ms: number): TimeoutController => {
   const controller: AbortController = new AbortController();
-  const id: number = window.setTimeout(() => controller.abort(), ms);
+  const id: ReturnType<typeof setTimeout> = globalThis.setTimeout(
+    () => controller.abort(),
+    ms,
+  );
 
   return {
     signal: controller.signal,
-    cancel: () => clearTimeout(id),
+    cancel: () => globalThis.clearTimeout(id),
   };
 };
 
@@ -44,13 +52,13 @@ const refreshToken = async (): Promise<boolean> => {
   isRefreshing = true;
 
   try {
-    const res: Response = await fetch(`${API_URL}/api/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
+    const res: Response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
     });
 
     if (!res.ok) {
-      throw new Error('Refresh failed');
+      throw new Error("Refresh failed");
     }
 
     notifyQueue(true);
@@ -64,9 +72,48 @@ const refreshToken = async (): Promise<boolean> => {
 };
 
 const shouldSkipRefresh = (endpoint: string): boolean =>
-  ['/api/auth/login', '/api/auth/logout', '/api/auth/refresh'].some(path =>
+  ["/auth/login", "/auth/logout", "/auth/refresh"].some(path =>
     endpoint.includes(path),
   );
+
+const resolveEndpoint = (endpoint: string): string =>
+  endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+const parseErrorMessage = (raw: string, fallback: string): string => {
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+
+    if (typeof parsed === "string" && parsed.trim()) {
+      return parsed;
+    }
+
+    if (typeof parsed === "object" && parsed !== null) {
+      if (
+        "message" in parsed &&
+        typeof parsed.message === "string" &&
+        parsed.message.trim()
+      ) {
+        return parsed.message;
+      }
+
+      if (
+        "message" in parsed &&
+        Array.isArray(parsed.message) &&
+        parsed.message.length > 0
+      ) {
+        return parsed.message.join(", ");
+      }
+    }
+
+    return fallback;
+  } catch {
+    return raw;
+  }
+};
 
 const buildConfig = (config?: RequestInit): RequestInit => {
   const body: BodyInit | null | undefined = config?.body;
@@ -99,7 +146,11 @@ const apiFetch = async <T>(
   };
 
   try {
-    const res: Response = await fetch(`${API_URL}/api${endpoint}`, finalConfig);
+    const normalizedEndpoint = resolveEndpoint(endpoint);
+    const res: Response = await fetch(
+      `${API_BASE_URL}${normalizedEndpoint}`,
+      finalConfig,
+    );
 
     if (res.status === 401 && retry && !shouldSkipRefresh(endpoint)) {
       const refreshed: boolean = await refreshToken();
@@ -109,7 +160,11 @@ const apiFetch = async <T>(
     }
 
     if (!res.ok) {
-      const message: string = await res.json();
+      const raw = await res.text();
+      const message = parseErrorMessage(
+        raw,
+        `Request failed with status ${res.status}`,
+      );
       throw { status: res.status, message } satisfies ApiError;
     }
 

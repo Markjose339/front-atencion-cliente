@@ -214,6 +214,7 @@ export function useCustomerServiceQuery({
       "ticket:updated",
       "ticket:called",
       "ticket:recalled",
+      "ticket:held",
       "ticket:started",
       "ticket:finished",
       "ticket:cancelled",
@@ -274,6 +275,16 @@ export function useCustomerServiceMutation() {
     onSuccess: invalidateCustomerService,
   });
 
+  const holdTicket = useMutation({
+    mutationFn: async (ticketId: string) => {
+      const parsedTicketId = customerServiceTicketIdSchema.parse(ticketId);
+      return api.patch<CustomerServiceMutationResponse>(
+        `/customer-service/${parsedTicketId}/hold`,
+      );
+    },
+    onSuccess: invalidateCustomerService,
+  });
+
   const finishTicketAttention = useMutation({
     mutationFn: async (ticketId: string) => {
       const parsedTicketId = customerServiceTicketIdSchema.parse(ticketId);
@@ -298,6 +309,7 @@ export function useCustomerServiceMutation() {
     callNextTicket,
     recallTicket,
     startTicketAttention,
+    holdTicket,
     finishTicketAttention,
     cancelTicket,
   };

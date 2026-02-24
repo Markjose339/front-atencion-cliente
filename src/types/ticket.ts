@@ -3,6 +3,7 @@ export type TicketType = "REGULAR" | "PREFERENCIAL";
 export type TicketStatus =
   | "PENDIENTE"
   | "LLAMADO"
+  | "ESPERA"
   | "ATENDIENDO"
   | "FINALIZADO"
   | "CANCELADO";

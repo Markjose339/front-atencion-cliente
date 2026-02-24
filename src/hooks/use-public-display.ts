@@ -384,6 +384,7 @@ export function usePublicDisplayCalls({
     socket.on("ticket:recalled", upsertTicket);
     socket.on("ticket:updated", handleTicketUpdated);
     socket.on("ticket:started", removeTicket);
+    socket.on("ticket:held", removeTicket);
     socket.on("ticket:finished", removeTicket);
     socket.on("ticket:cancelled", removeTicket);
 
@@ -392,6 +393,7 @@ export function usePublicDisplayCalls({
       socket.off("ticket:recalled", upsertTicket);
       socket.off("ticket:updated", handleTicketUpdated);
       socket.off("ticket:started", removeTicket);
+      socket.off("ticket:held", removeTicket);
       socket.off("ticket:finished", removeTicket);
       socket.off("ticket:cancelled", removeTicket);
     };
