@@ -54,6 +54,9 @@ export const sidebarData: {
           title: "Dashboard",
           url: "/dashboard",
           icon: Home,
+          access: {
+            roles: ["administrador"],
+          }
         },
         {
           title: "Usuarios",

@@ -36,6 +36,28 @@ const logoutUser = async (): Promise<void> => {
   await api.post<void>("/auth/logout")
 }
 
+const ADMIN_ROLE_NAMES = new Set(["administrador", "admin"])
+const OPERATOR_ROLE_NAMES = new Set(["operador", "operator"])
+
+const normalizeRoleName = (value: string): string => value.trim().toLowerCase()
+
+const hasAnyRoleName = (userRoles: string[], expectedRoles: Set<string>): boolean =>
+  userRoles.some((role) => expectedRoles.has(normalizeRoleName(role)))
+
+const resolvePostLoginRoute = (user: User): string => {
+  const roles = user.roles ?? []
+
+  if (hasAnyRoleName(roles, ADMIN_ROLE_NAMES)) {
+    return "/dashboard"
+  }
+
+  if (hasAnyRoleName(roles, OPERATOR_ROLE_NAMES)) {
+    return "/customer-service"
+  }
+
+  return "/dashboard"
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -56,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     mutationFn: loginUser,
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["auth", "user"], userData)
-      router.push("/dashboard")
+      router.push(resolvePostLoginRoute(userData))
     },
   })
 
