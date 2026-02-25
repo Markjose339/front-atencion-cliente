@@ -221,7 +221,7 @@ export function TicketCreate({ branchId }: Props) {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#114591] dark:text-[#FDCB35]">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#114591] dark:text-[#FDCB35]">
                     {currentMeta.label}
                   </p>
                   <h1 className="text-2xl font-bold text-[#0C3E63] dark:text-[#edf5ff] sm:text-3xl">

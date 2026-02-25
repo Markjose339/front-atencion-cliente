@@ -172,7 +172,13 @@ const apiFetch = async <T>(
       return null as T;
     }
 
-    return (await res.json()) as T;
+    const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+
+    if (contentType.includes("json")) {
+      return (await res.json()) as T;
+    }
+
+    return (await res.text()) as T;
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw { status: 408, message: 'Request timeout' } satisfies ApiError;

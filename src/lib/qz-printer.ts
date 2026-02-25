@@ -1,14 +1,19 @@
 "use client";
 
 import * as qz from "qz-tray";
+import { api } from "@/lib/api";
 import { Ticket } from "@/types/ticket";
 
 export class QZPrinter {
   private static instance: QZPrinter;
   private static readonly PRINTER_NAME = "EPSON TM-T20II Receipt";
+  private static readonly CERT_PATH = "/qz/cert";
+  private static readonly SIGN_PATH = "/qz/sign";
 
   private connected = false;
   private operationQueue: Promise<void> = Promise.resolve();
+  private securityConfigured = false;
+  private securityConfigurationPromise: Promise<void> | null = null;
 
   private constructor() {}
 
@@ -59,13 +64,117 @@ export class QZPrinter {
       return error;
     }
 
+    if (normalized.includes("next_public_api_url")) {
+      return error;
+    }
+
+    if (normalized.includes("failed to sign request")) {
+      return new Error(
+        "No se pudo firmar la peticion para QZ Tray. Verifica el endpoint /qz/sign."
+      );
+    }
+
     return new Error(
       "No se pudo conectar a QZ Tray. Verifica que este instalado y ejecutandose."
     );
   }
 
+  private toError(error: unknown, fallback: string): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    if (typeof error === "object" && error !== null && "message" in error) {
+      const message = (error as { message?: unknown }).message;
+      if (typeof message === "string" && message.length > 0) {
+        return new Error(message);
+      }
+    }
+
+    return new Error(fallback);
+  }
+
+  private async fetchCertificate(): Promise<string> {
+    try {
+      return await api.get<string>(QZPrinter.CERT_PATH, {
+        headers: {
+          Accept: "text/plain",
+        },
+        cache: "no-store",
+      });
+    } catch (error) {
+      throw this.toError(
+        error,
+        "No se pudo obtener el certificado de QZ desde el backend."
+      );
+    }
+  }
+
+  private async fetchSignature(data: string): Promise<string> {
+    try {
+      const payload = await api.post<{ signature?: unknown }>(
+        QZPrinter.SIGN_PATH,
+        { data },
+        {
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        }
+      );
+
+      if (
+        typeof payload.signature !== "string" ||
+        payload.signature.length === 0
+      ) {
+        throw new Error("La respuesta de /qz/sign no contiene una firma valida.");
+      }
+
+      return payload.signature;
+    } catch (error) {
+      throw this.toError(
+        error,
+        "No se pudo firmar la peticion de QZ en el backend."
+      );
+    }
+  }
+
+  private async ensureSecurityConfigured(): Promise<void> {
+    if (this.securityConfigured) {
+      return;
+    }
+
+    if (this.securityConfigurationPromise) {
+      return this.securityConfigurationPromise;
+    }
+
+    this.securityConfigurationPromise = (async () => {
+      qz.security.setSignatureAlgorithm("SHA512");
+      qz.security.setCertificatePromise(
+        async () => this.fetchCertificate(),
+        { rejectOnFailure: true }
+      );
+      qz.security.setSignaturePromise(async (toSign) =>
+        this.fetchSignature(toSign)
+      );
+
+      this.securityConfigured = true;
+    })()
+      .catch((error) => {
+        this.securityConfigured = false;
+        throw error;
+      })
+      .finally(() => {
+        this.securityConfigurationPromise = null;
+      });
+
+    return this.securityConfigurationPromise;
+  }
+
   async connect(): Promise<void> {
     return this.enqueueOperation(async () => {
+      await this.ensureSecurityConfigured();
+
       if (this.connected && qz.websocket.isActive()) {
         return;
       }
@@ -143,7 +252,7 @@ export class QZPrinter {
     }).format(date);
 
     return [
-      ESC + "@" + ESC + "a1" + ESC + "M" + "\x00" + GS + "!" + "\x00",
+      ESC + "@" + ESC + "a" + "\x01" + ESC + "M" + "\x00" + GS + "!" + "\x00",
       "CORREOS DE BOLIVIA" + LF,
       `Sucursal: ${ticket.branchName}` + LF,
       LF,
