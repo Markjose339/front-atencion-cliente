@@ -28,8 +28,8 @@ type Advertisement = {
   transition?: "FADE" | "SLIDE" | null;
 };
 
-const NORMAL_VIDEO_VOLUME = 1;
-const DUCKED_VIDEO_VOLUME = 0.1;
+const NORMAL_VIDEO_VOLUME = 0.50;
+const DUCKED_VIDEO_VOLUME = 0.015;
 const VIDEO_START_TIMEOUT_MS = 3_000;
 const AUTO_UNMUTE_INITIAL_DELAY_MS = 300;
 const AUTO_UNMUTE_RETRY_INTERVAL_MS = 1_000;
@@ -104,19 +104,24 @@ function AudioUnlockOverlay({ onUnlock }: { onUnlock: () => void }) {
 }
 
 function usePlaylistIndex(length: number) {
-  const [index, setIndex] = useState(0);
+  const [playbackStep, setPlaybackStep] = useState(0);
 
   const goToNext = useCallback(() => {
-    setIndex((prev) => (length > 0 ? (prev + 1) % length : 0));
+    setPlaybackStep((prev) => (length > 0 ? prev + 1 : 0));
   }, [length]);
 
   return {
-    safeIndex: length > 0 ? index % length : 0,
+    safeIndex: length > 0 ? playbackStep % length : 0,
+    playbackStep,
     goToNext,
   };
 }
 
-function useImageAutoAdvance(advertisement: Advertisement | null, goToNext: () => void) {
+function useImageAutoAdvance(
+  advertisement: Advertisement | null,
+  goToNext: () => void,
+  playbackStep: number,
+) {
   useEffect(() => {
     if (advertisement?.mediaType !== "IMAGE") {
       return;
@@ -128,14 +133,14 @@ function useImageAutoAdvance(advertisement: Advertisement | null, goToNext: () =
     return () => {
       window.clearTimeout(timerId);
     };
-  }, [advertisement, goToNext]);
+  }, [advertisement, goToNext, playbackStep]);
 }
 
 function useVideoDucking(
   advertisement: Advertisement | null,
   videoRef: RefObject<HTMLVideoElement | null>,
   duckAudio: boolean,
-  safeIndex: number,
+  playbackStep: number,
 ) {
   useEffect(() => {
     if (advertisement?.mediaType !== "VIDEO") {
@@ -148,7 +153,7 @@ function useVideoDucking(
     }
 
     video.volume = duckAudio ? DUCKED_VIDEO_VOLUME : NORMAL_VIDEO_VOLUME;
-  }, [advertisement, duckAudio, safeIndex, videoRef]);
+  }, [advertisement, duckAudio, playbackStep, videoRef]);
 }
 
 function useVideoAutoUnmute(
@@ -156,7 +161,7 @@ function useVideoAutoUnmute(
   videoRef: RefObject<HTMLVideoElement | null>,
   duckAudio: boolean,
   goToNext: () => void,
-  safeIndex: number,
+  playbackStep: number,
 ) {
   useEffect(() => {
     if (advertisement?.mediaType !== "VIDEO") {
@@ -237,7 +242,7 @@ function useVideoAutoUnmute(
         window.clearTimeout(retryId);
       }
     };
-  }, [advertisement, duckAudio, goToNext, safeIndex, videoRef]);
+  }, [advertisement, duckAudio, goToNext, playbackStep, videoRef]);
 }
 
 function useAudioUnlock({
@@ -339,14 +344,16 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
   const advertisements = useMemo(() => (playlist.data ?? []) as Advertisement[], [playlist.data]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { safeIndex, goToNext } = usePlaylistIndex(advertisements.length);
+  const { safeIndex, playbackStep, goToNext } = usePlaylistIndex(advertisements.length);
 
   const currentAdvertisement = advertisements[safeIndex] ?? null;
   const currentFileUrl = currentAdvertisement
     ? resolveAdvertisementFileUrl(currentAdvertisement.fileUrl)
     : "";
   const transitionClass = getTransitionClass(currentAdvertisement?.transition ?? null);
-  const mediaKey = currentAdvertisement ? `${currentAdvertisement.id}-${safeIndex}` : `empty-${safeIndex}`;
+  const mediaKey = currentAdvertisement
+    ? `${currentAdvertisement.id}-${playbackStep}`
+    : `empty-${playbackStep}`;
   const targetVolume = duckAudio ? DUCKED_VIDEO_VOLUME : NORMAL_VIDEO_VOLUME;
   const isVideoActive = currentAdvertisement?.mediaType === "VIDEO";
   const { audioLocked, unlock } = useAudioUnlock({
@@ -356,9 +363,9 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
     targetVolume,
   });
 
-  useImageAutoAdvance(currentAdvertisement, goToNext);
-  useVideoDucking(currentAdvertisement, videoRef, duckAudio, safeIndex);
-  useVideoAutoUnmute(currentAdvertisement, videoRef, duckAudio, goToNext, safeIndex);
+  useImageAutoAdvance(currentAdvertisement, goToNext, playbackStep);
+  useVideoDucking(currentAdvertisement, videoRef, duckAudio, playbackStep);
+  useVideoAutoUnmute(currentAdvertisement, videoRef, duckAudio, goToNext, playbackStep);
 
   if (playlist.isLoading) {
     return (
