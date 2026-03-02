@@ -1,11 +1,12 @@
-﻿import { resolveAdvertisementFileUrl } from "@/lib/advertisement-media";
+import { resolveAdvertisementFileUrl } from "@/lib/advertisement-media";
 import { cn } from "@/lib/utils";
 import { AdvertisementMediaType } from "@/types/advertisement";
 
 type AdvertisementPreviewProps = {
-  fileUrl: string;
+  fileUrl: string | null;
   mediaType: AdvertisementMediaType;
   title: string;
+  textContent?: string | null;
   className?: string;
 };
 
@@ -13,8 +14,24 @@ export function AdvertisementPreview({
   fileUrl,
   mediaType,
   title,
+  textContent,
   className,
 }: AdvertisementPreviewProps) {
+  if (mediaType === "TEXT") {
+    return (
+      <div
+        className={cn(
+          "flex h-20 w-36 items-center rounded-md border bg-muted/30 px-2.5 py-2 text-xs",
+          className,
+        )}
+      >
+        <p className="line-clamp-4 break-words text-muted-foreground">
+          {textContent?.trim() || "Sin contenido de texto"}
+        </p>
+      </div>
+    );
+  }
+
   const resolvedFileUrl = resolveAdvertisementFileUrl(fileUrl);
 
   if (!resolvedFileUrl) {

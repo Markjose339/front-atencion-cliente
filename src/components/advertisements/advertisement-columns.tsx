@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
@@ -7,7 +7,6 @@ import {
   formatDateTime,
   humanizeDisplayMode,
   humanizeMediaType,
-  humanizeTransition,
   isAdvertisementActiveNow,
 } from "@/hooks/use-advertisements";
 import { AdvertisementActions } from "@/components/advertisements/advertisement-actions";
@@ -32,16 +31,15 @@ export const advertisementColumns = (
     ),
     cell: ({ row }) => {
       const advertisement = row.original;
+      const secondaryText =
+        advertisement.mediaType === "TEXT"
+          ? advertisement.textContent?.trim() || "Sin texto"
+          : advertisement.mimeType?.trim() || "Contenido multimedia";
+
       return (
         <div className="space-y-1">
           <p className="font-medium">{advertisement.title}</p>
-          {advertisement.description ? (
-            <p className="max-w-[28ch] truncate text-xs text-muted-foreground">
-              {advertisement.description}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">Sin descripcion</p>
-          )}
+          <p className="max-w-[28ch] truncate text-xs text-muted-foreground">{secondaryText}</p>
         </div>
       );
     },
@@ -76,44 +74,6 @@ export const advertisementColumns = (
       </Button>
     ),
     cell: ({ row }) => humanizeDisplayMode(row.original.displayMode),
-  },
-  {
-    accessorKey: "transition",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Transicion
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => humanizeTransition(row.original.transition),
-  },
-  {
-    accessorKey: "durationSeconds",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Duracion
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => `${row.original.durationSeconds}s`,
-  },
-  {
-    accessorKey: "sortOrder",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Orden
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
   },
   {
     accessorKey: "isActive",
@@ -167,6 +127,7 @@ export const advertisementColumns = (
       <AdvertisementPreview
         fileUrl={row.original.fileUrl}
         mediaType={row.original.mediaType}
+        textContent={row.original.textContent}
         title={row.original.title}
       />
     ),

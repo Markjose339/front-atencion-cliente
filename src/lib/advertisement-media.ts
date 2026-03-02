@@ -1,5 +1,5 @@
-﻿export const resolveAdvertisementFileUrl = (fileUrl: string): string => {
-  const normalized = fileUrl.trim();
+export const resolveAdvertisementFileUrl = (fileUrl: string | null | undefined): string => {
+  const normalized = (fileUrl ?? "").trim();
   if (!normalized) {
     return "";
   }

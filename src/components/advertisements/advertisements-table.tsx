@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useMemo } from "react";
 import { AlertCircle, FilterX } from "lucide-react";
@@ -23,7 +23,6 @@ import {
 import {
   ADVERTISEMENT_DISPLAY_MODES,
   ADVERTISEMENT_MEDIA_TYPES,
-  ADVERTISEMENT_TRANSITIONS,
 } from "@/types/advertisement";
 
 const normalizePositiveNumber = (value: string | null, fallback: number): number => {
@@ -72,7 +71,6 @@ export function AdvertisementsTable() {
       findAdvertisementOptions.data ?? {
         mediaTypes: [...ADVERTISEMENT_MEDIA_TYPES],
         displayModes: [...ADVERTISEMENT_DISPLAY_MODES],
-        transitions: [...ADVERTISEMENT_TRANSITIONS],
       },
     [findAdvertisementOptions.data],
   );

@@ -16,7 +16,6 @@ import { useSocket } from "@/hooks/use-socket";
 import {
   CustomerServiceCalledTicket,
   CustomerServiceHeldTicket,
-  CustomerServiceTicket,
   CustomerServiceWindowOption,
 } from "@/types/customer-service";
 
@@ -46,11 +45,7 @@ const CALL_NEXT_EMPTY_SERVICE_MESSAGE = "No hay tickets disponibles para tu serv
 
 const parsePositiveInt = (value: string | null, fallback: number): number => {
   const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return fallback;
-  }
-
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
   return Math.trunc(parsed);
 };
 
@@ -60,9 +55,7 @@ type TicketScope = {
 };
 
 const parseTicketScope = (payload: unknown): TicketScope | null => {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
+  if (!payload || typeof payload !== "object") return null;
 
   const source = payload as Record<string, unknown>;
   const nestedPayload =
@@ -77,17 +70,12 @@ const parseTicketScope = (payload: unknown): TicketScope | null => {
   const serviceId =
     typeof nestedPayload.serviceId === "string" ? nestedPayload.serviceId.trim() : "";
 
-  if (!branchId || !serviceId) {
-    return null;
-  }
-
+  if (!branchId || !serviceId) return null;
   return { branchId, serviceId };
 };
 
 const isCallNextEmptyServiceError = (error: unknown): boolean => {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
+  if (!error || typeof error !== "object") return false;
 
   const record = error as Record<string, unknown>;
   const status = typeof record.status === "number" ? record.status : null;
@@ -124,45 +112,35 @@ export function CustomerServiceWorkspace() {
   const holdInFlightRef = useRef<Set<string>>(new Set());
   const recallInFlightRef = useRef<Set<string>>(new Set());
   const startInFlightRef = useRef<Set<string>>(new Set());
-  const { playNotification } = useNotificationSound();
+
+  const { playNotification, unlockAudio } = useNotificationSound();
+  const primedAudioRef = useRef(false);
+  const lastBeepAtRef = useRef(0);
 
   const options = useMemo(() => windowsQuery.data ?? [], [windowsQuery.data]);
 
   const selectedOption = useMemo(
     () =>
-      options.find(
-        (option) => option.branchId === branchId && option.serviceId === serviceId,
-      ) ?? null,
+      options.find((option) => option.branchId === branchId && option.serviceId === serviceId) ??
+      null,
     [options, branchId, serviceId],
   );
+
   const selectedScopeKey = selectedOption
     ? `${selectedOption.branchId}:${selectedOption.serviceId}`
     : "";
 
   const updateURL = useCallback(
-    (next: {
-      page: number;
-      limit: number;
-      search: string;
-      branchId?: string;
-      serviceId?: string;
-    }) => {
+    (next: { page: number; limit: number; search: string; branchId?: string; serviceId?: string }) => {
       const params = new URLSearchParams();
       params.set("page", next.page.toString());
       params.set("limit", next.limit.toString());
 
       const trimmedSearch = next.search.trim();
-      if (trimmedSearch) {
-        params.set("search", trimmedSearch);
-      }
+      if (trimmedSearch) params.set("search", trimmedSearch);
 
-      if (next.branchId) {
-        params.set("branchId", next.branchId);
-      }
-
-      if (next.serviceId) {
-        params.set("serviceId", next.serviceId);
-      }
+      if (next.branchId) params.set("branchId", next.branchId);
+      if (next.serviceId) params.set("serviceId", next.serviceId);
 
       router.replace(`?${params.toString()}`, { scroll: false });
     },
@@ -170,19 +148,12 @@ export function CustomerServiceWorkspace() {
   );
 
   useEffect(() => {
-    if (windowsQuery.isLoading) {
-      return;
-    }
-
-    if (options.length !== 1) {
-      return;
-    }
+    if (windowsQuery.isLoading) return;
+    if (options.length !== 1) return;
 
     const onlyOption = options[0];
 
-    if (branchId === onlyOption.branchId && serviceId === onlyOption.serviceId) {
-      return;
-    }
+    if (branchId === onlyOption.branchId && serviceId === onlyOption.serviceId) return;
 
     updateURL({
       page: 1,
@@ -212,53 +183,32 @@ export function CustomerServiceWorkspace() {
     () => response?.data.find((ticket) => ticket.status === "ATENDIENDO") ?? null,
     [response?.data],
   );
-  const heldTickets = useMemo(
-    () => response?.heldTickets ?? [],
-    [response?.heldTickets],
-  );
+
+  const heldTickets = useMemo(() => response?.heldTickets ?? [], [response?.heldTickets]);
   const isHeldTicketsLimitReached = heldTickets.length >= MAX_HELD_TICKETS;
 
   const backendCalledTicket = useMemo(() => {
     const ticket = response?.calledTicket;
-
-    if (!ticket || !selectedScopeKey) {
-      return null;
-    }
+    if (!ticket || !selectedScopeKey) return null;
 
     const ticketScopeKey = `${ticket.branchId}:${ticket.serviceId}`;
-    if (ticketScopeKey !== selectedScopeKey) {
-      return null;
-    }
+    if (ticketScopeKey !== selectedScopeKey) return null;
 
     return ticket;
   }, [response?.calledTicket, selectedScopeKey]);
 
   const calledTicket = useMemo(() => {
-    if (backendCalledTicket) {
-      return backendCalledTicket;
-    }
-
-    if (!calledTicketState) {
-      return null;
-    }
-
-    if (!selectedScopeKey || calledTicketState.scopeKey !== selectedScopeKey) {
-      return null;
-    }
-
-    if (response?.isAttendingTicket) {
-      return null;
-    }
-
+    if (backendCalledTicket) return backendCalledTicket;
+    if (!calledTicketState) return null;
+    if (!selectedScopeKey || calledTicketState.scopeKey !== selectedScopeKey) return null;
+    if (response?.isAttendingTicket) return null;
     return calledTicketState.ticket;
   }, [backendCalledTicket, calledTicketState, response?.isAttendingTicket, selectedScopeKey]);
 
   useEffect(() => {
-    if (!socket || !selectedOption) {
-      return;
-    }
+    if (!socket || !selectedOption) return;
 
-    const handleTicketCreated = (payload: unknown) => {
+    const handleTicketCreated = async (payload: unknown) => {
       const ticketScope = parseTicketScope(payload);
 
       if (ticketScope) {
@@ -266,12 +216,19 @@ export function CustomerServiceWorkspace() {
           ticketScope.branchId === selectedOption.branchId &&
           ticketScope.serviceId === selectedOption.serviceId;
 
-        if (!isSameScope) {
-          return;
-        }
+        if (!isSameScope) return;
       }
 
-      playNotification();
+      if (!primedAudioRef.current) {
+        await unlockAudio();
+        primedAudioRef.current = true;
+      }
+
+      const now = Date.now();
+      if (now - lastBeepAtRef.current < 700) return;
+      lastBeepAtRef.current = now;
+
+      await playNotification("operator");
     };
 
     socket.on("ticket:created", handleTicketCreated);
@@ -279,7 +236,7 @@ export function CustomerServiceWorkspace() {
     return () => {
       socket.off("ticket:created", handleTicketCreated);
     };
-  }, [playNotification, selectedOption, socket]);
+  }, [playNotification, unlockAudio, selectedOption, socket]);
 
   const handlePaginationChange = useCallback(
     (pagination: { pageIndex: number; pageSize: number }) => {
@@ -347,9 +304,7 @@ export function CustomerServiceWorkspace() {
   }, []);
 
   const onCallNext = async () => {
-    if (!selectedOption) {
-      return;
-    }
+    if (!selectedOption) return;
 
     try {
       const ticket = await callNextTicket.mutateAsync({
@@ -366,6 +321,7 @@ export function CustomerServiceWorkspace() {
         scopeKey: `${ticket.branchId}:${ticket.serviceId}`,
         ticket,
       });
+
       toast.success(`Ticket "${ticket.code}" llamado correctamente`);
     } catch (error) {
       if (isCallNextEmptyServiceError(error)) {
@@ -379,15 +335,10 @@ export function CustomerServiceWorkspace() {
 
   const onRecallByTicketId = useCallback(
     async (ticketId: string) => {
-      if (recallInFlightRef.current.has(ticketId)) {
-        return;
-      }
+      if (recallInFlightRef.current.has(ticketId)) return;
 
       recallInFlightRef.current.add(ticketId);
-      setLoadingRecallById((previous) => ({
-        ...previous,
-        [ticketId]: true,
-      }));
+      setLoadingRecallById((previous) => ({ ...previous, [ticketId]: true }));
 
       const mutationPromise = (async () => {
         const data = await recallTicket.mutateAsync(ticketId);
@@ -421,36 +372,25 @@ export function CustomerServiceWorkspace() {
   );
 
   const onRecallTicket = async () => {
-    if (!calledTicket) {
-      return;
-    }
-
+    if (!calledTicket) return;
     await onRecallByTicketId(calledTicket.id);
   };
 
   const selectHeldTicketService = useCallback(
     (ticket: CustomerServiceHeldTicket): boolean => {
-      if (!selectedOption) {
-        return false;
-      }
+      if (!selectedOption) return false;
 
       const isSameService =
-        ticket.branchId === selectedOption.branchId &&
-        ticket.serviceId === selectedOption.serviceId;
+        ticket.branchId === selectedOption.branchId && ticket.serviceId === selectedOption.serviceId;
 
-      if (isSameService) {
-        return true;
-      }
+      if (isSameService) return true;
 
       const matchingOption = options.find(
-        (option) =>
-          option.branchId === ticket.branchId && option.serviceId === ticket.serviceId,
+        (option) => option.branchId === ticket.branchId && option.serviceId === ticket.serviceId,
       );
 
       if (!matchingOption) {
-        toast.error(
-          `No tienes una ventanilla asignada para el servicio "${ticket.serviceName}"`,
-        );
+        toast.error(`No tienes una ventanilla asignada para el servicio "${ticket.serviceName}"`);
         return false;
       }
 
@@ -475,9 +415,7 @@ export function CustomerServiceWorkspace() {
   );
 
   const onRecallHeldTicket = async (ticket: CustomerServiceHeldTicket) => {
-    if (!selectHeldTicketService(ticket)) {
-      return;
-    }
+    if (!selectHeldTicketService(ticket)) return;
 
     if (calledTicket && calledTicket.id !== ticket.id) {
       toast.error(RECALL_CONFLICT_CALLED_ERROR_MESSAGE);
@@ -497,15 +435,10 @@ export function CustomerServiceWorkspace() {
 
   const onStartByTicketId = useCallback(
     async (ticketId: string) => {
-      if (startInFlightRef.current.has(ticketId)) {
-        return;
-      }
+      if (startInFlightRef.current.has(ticketId)) return;
 
       startInFlightRef.current.add(ticketId);
-      setLoadingStartById((previous) => ({
-        ...previous,
-        [ticketId]: true,
-      }));
+      setLoadingStartById((previous) => ({ ...previous, [ticketId]: true }));
 
       const mutationPromise = (async () => {
         const data = await startTicketAttention.mutateAsync(ticketId);
@@ -536,17 +469,12 @@ export function CustomerServiceWorkspace() {
   );
 
   const onStartAttention = async () => {
-    if (!calledTicket) {
-      return;
-    }
-
+    if (!calledTicket) return;
     await onStartByTicketId(calledTicket.id);
   };
 
   const onResumeHeldAttention = async (ticket: CustomerServiceHeldTicket) => {
-    if (!selectHeldTicketService(ticket)) {
-      return;
-    }
+    if (!selectHeldTicketService(ticket)) return;
 
     if (calledTicket && calledTicket.id !== ticket.id) {
       toast.error(RESUME_CONFLICT_CALLED_ERROR_MESSAGE);
@@ -566,15 +494,10 @@ export function CustomerServiceWorkspace() {
 
   const onHoldByTicketId = useCallback(
     async (ticketId: string) => {
-      if (holdInFlightRef.current.has(ticketId)) {
-        return;
-      }
+      if (holdInFlightRef.current.has(ticketId)) return;
 
       holdInFlightRef.current.add(ticketId);
-      setLoadingHoldById((previous) => ({
-        ...previous,
-        [ticketId]: true,
-      }));
+      setLoadingHoldById((previous) => ({ ...previous, [ticketId]: true }));
 
       const mutationPromise = (async () => {
         const data = await holdTicket.mutateAsync(ticketId);
@@ -605,9 +528,7 @@ export function CustomerServiceWorkspace() {
   );
 
   const onHoldAttention = async () => {
-    if (!currentAttendingTicket) {
-      return;
-    }
+    if (!currentAttendingTicket) return;
 
     if (isHeldTicketsLimitReached) {
       toast.error(HOLD_LIMIT_ERROR_MESSAGE);
@@ -618,9 +539,7 @@ export function CustomerServiceWorkspace() {
   };
 
   const onCancelCalled = async () => {
-    if (!calledTicket) {
-      return;
-    }
+    if (!calledTicket) return;
 
     toast.promise(cancelTicket.mutateAsync(calledTicket.id), {
       loading: "Cancelando ticket...",
@@ -633,9 +552,7 @@ export function CustomerServiceWorkspace() {
   };
 
   const onFinishAttention = async () => {
-    if (!currentAttendingTicket) {
-      return;
-    }
+    if (!currentAttendingTicket) return;
 
     toast.promise(finishTicketAttention.mutateAsync(currentAttendingTicket.id), {
       loading: "Finalizando atencion...",
@@ -643,8 +560,7 @@ export function CustomerServiceWorkspace() {
         setCalledTicketState(null);
         return data.message;
       },
-      error: (error) =>
-        getCustomerServiceErrorText(error, "No se pudo finalizar la atencion"),
+      error: (error) => getCustomerServiceErrorText(error, "No se pudo finalizar la atencion"),
     });
   };
 
@@ -653,10 +569,7 @@ export function CustomerServiceWorkspace() {
       <div className="flex flex-col items-center justify-center gap-4 py-14 text-center">
         <AlertCircle className="h-10 w-10 text-destructive" />
         <p className="text-sm font-medium text-destructive">
-          {getCustomerServiceErrorText(
-            windowsQuery.error,
-            "No se pudo cargar tus ventanillas",
-          )}
+          {getCustomerServiceErrorText(windowsQuery.error, "No se pudo cargar tus ventanillas")}
         </p>
       </div>
     );
@@ -683,12 +596,7 @@ export function CustomerServiceWorkspace() {
   }
 
   if (!selectedOption && options.length > 1) {
-    return (
-      <CustomerServiceWindowSelector
-        options={options}
-        onSelectWindow={handleSelectWindow}
-      />
-    );
+    return <CustomerServiceWindowSelector options={options} onSelectWindow={handleSelectWindow} />;
   }
 
   if (!selectedOption && options.length === 1) {
@@ -730,24 +638,17 @@ export function CustomerServiceWorkspace() {
     Boolean(response?.isAttendingTicket);
 
   const hasActiveCalledTicket = Boolean(calledTicket);
-  const hasActiveAttendingTicket =
-    Boolean(currentAttendingTicket) || Boolean(response?.isAttendingTicket);
+  const hasActiveAttendingTicket = Boolean(currentAttendingTicket) || Boolean(response?.isAttendingTicket);
 
-  const recallBlockedByCalledMessage = hasActiveCalledTicket
-    ? RECALL_CONFLICT_CALLED_ERROR_MESSAGE
-    : null;
-  const recallBlockedByAttendingMessage = hasActiveAttendingTicket
-    ? RECALL_CONFLICT_ATTENDING_ERROR_MESSAGE
-    : null;
-  const resumeBlockedByCalledMessage = hasActiveCalledTicket
-    ? RESUME_CONFLICT_CALLED_ERROR_MESSAGE
-    : null;
-  const resumeBlockedByAttendingMessage = hasActiveAttendingTicket
-    ? RESUME_CONFLICT_ATTENDING_ERROR_MESSAGE
-    : null;
+  const recallBlockedByCalledMessage = hasActiveCalledTicket ? RECALL_CONFLICT_CALLED_ERROR_MESSAGE : null;
+  const recallBlockedByAttendingMessage = hasActiveAttendingTicket ? RECALL_CONFLICT_ATTENDING_ERROR_MESSAGE : null;
+  const resumeBlockedByCalledMessage = hasActiveCalledTicket ? RESUME_CONFLICT_CALLED_ERROR_MESSAGE : null;
+  const resumeBlockedByAttendingMessage = hasActiveAttendingTicket ? RESUME_CONFLICT_ATTENDING_ERROR_MESSAGE : null;
+
   const currentAttendingHoldLoading = currentAttendingTicket
     ? Boolean(loadingHoldById[currentAttendingTicket.id])
     : false;
+
   const calledTicketStartLoading = calledTicket ? Boolean(loadingStartById[calledTicket.id]) : false;
 
   return (

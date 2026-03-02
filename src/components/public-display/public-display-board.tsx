@@ -1,29 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Loader2,
-  Moon,
-  RefreshCw,
-  Settings2,
-  Sun,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { Announcements } from "@/components/announcements";
-import { ClientTicketDisplay } from "@/components/client-ticket-display";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { PublicDisplayCalledTicket } from "@/types/public-display";
+import { DisplayHeader } from "./display-header"; 
+import { TicketGrid } from "./ticket-grid"; 
+import { TickerFooter } from "./ticker-footer"; 
+import { AdminMenu } from "./admin-menu"; 
 
 type PublicDisplayBoardProps = {
   branchName: string;
@@ -57,163 +41,62 @@ export function PublicDisplayBoard({
 }: PublicDisplayBoardProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [menuVisible, setMenuVisible] = useState(false);
-  const highlightedKeySet = useMemo(() => new Set(highlightedCallKeys), [highlightedCallKeys]);
+
+  const highlightedKeySet = useMemo(
+    () => new Set(highlightedCallKeys),
+    [highlightedCallKeys],
+  );
 
   const isDarkTheme = resolvedTheme === "dark";
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
-
       if (event.ctrlKey && event.shiftKey && key === "m") {
         event.preventDefault();
-        setMenuVisible((previous) => !previous);
+        setMenuVisible((prev) => !prev);
       }
-
-      if (key === "escape") {
-        setMenuVisible(false);
-      }
+      if (key === "escape") setMenuVisible(false);
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const toggleTheme = () => {
-    setTheme(isDarkTheme ? "light" : "dark");
-  };
+  const toggleTheme = () => setTheme(isDarkTheme ? "light" : "dark");
 
   return (
-    <main className="relative isolate h-dvh w-full overflow-hidden bg-[#f4f8ff] text-[#0C3E63] dark:bg-[#0C3E63] dark:text-[#e9f2ff]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_8%,rgba(32,83,154,0.24),transparent_38%),radial-gradient(circle_at_92%_4%,rgba(253,203,53,0.25),transparent_34%),linear-gradient(175deg,#f7fbff_0%,#e9f1ff_56%,#fff7db_100%)] dark:bg-[radial-gradient(circle_at_8%_8%,rgba(32,83,154,0.45),transparent_38%),radial-gradient(circle_at_92%_4%,rgba(240,224,73,0.2),transparent_34%),linear-gradient(165deg,#0C3E63_0%,#1f3b62_58%,#0C3E63_100%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(17,69,145,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(17,69,145,0.12)_1px,transparent_1px)] bg-size[38px_38px] dark:bg-[linear-gradient(rgba(240,224,73,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(240,224,73,0.12)_1px,transparent_1px)]" />
+    <main className="relative isolate h-dvh w-full overflow-hidden bg-[#F0F4F8] text-[#0A2A4A] dark:bg-[#07192B] dark:text-[#E8F0FA]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(0,82,156,0.12),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(198,168,86,0.10),transparent_50%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(0,82,156,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,82,156,0.06)_1px,transparent_1px)] bg-size[40px_40px]" />
+
+      {menuVisible && (
+        <AdminMenu
+          isDarkTheme={isDarkTheme}
+          voiceEnabled={voiceEnabled}
+          isVoiceSupported={isVoiceSupported}
+          onToggleTheme={toggleTheme}
+          onToggleVoice={onToggleVoice}
+          onReload={onReload}
+          onOpenSettings={onOpenSettings}
+        />
+      )}
 
       <div className="relative z-10 flex h-full flex-col">
-        {menuVisible ? (
-          <div className="absolute right-5 top-4 z-30">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 rounded-xl border-[#20539A]/45 bg-white text-[#114591] hover:border-[#114591] hover:bg-[#e9f1ff] dark:border-[#5e81ab]/70 dark:bg-[#123d64] dark:text-[#deebff] dark:hover:border-[#86a9d9] dark:hover:bg-[#114591]"
-                >
-                  <Settings2 className="mr-2 h-4 w-4" />
-                  Menu
-                </Button>
-              </DropdownMenuTrigger>
+        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,7fr)_minmax(0,3fr)_auto]">
+          <DisplayHeader isAnnouncing={isAnnouncing} voiceEnabled={voiceEnabled} />
 
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Pantalla publica</DropdownMenuLabel>
-                <DropdownMenuSeparator />
+          <TicketGrid
+            tickets={tickets}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+            highlightedKeySet={highlightedKeySet}
+            requiresConfiguration={requiresConfiguration}
+            onReload={onReload}
+            onOpenSettings={onOpenSettings}
+          />
 
-                <DropdownMenuItem onSelect={onOpenSettings}>
-                  <Settings2 className="h-4 w-4" />
-                  Configurar pantalla
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onSelect={onReload}>
-                  <RefreshCw className="h-4 w-4" />
-                  Refrescar tickets
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onSelect={toggleTheme}>
-                  {isDarkTheme ? (
-                    <>
-                      <Sun className="h-4 w-4" />
-                      Modo claro
-                    </>
-                  ) : (
-                    <>
-                      <Moon className="h-4 w-4" />
-                      Modo oscuro
-                    </>
-                  )}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onSelect={onToggleVoice}
-                  disabled={!isVoiceSupported}
-                  title={
-                    isVoiceSupported
-                      ? "Activar o desactivar voz"
-                      : "Tu navegador no soporta voz"
-                  }
-                >
-                  {voiceEnabled ? (
-                    <>
-                      <Volume2 className="h-4 w-4" />
-                      Voz activa
-                    </>
-                  ) : (
-                    <>
-                      <VolumeX className="h-4 w-4" />
-                      Voz apagada
-                    </>
-                  )}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : null}
-
-        <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,7fr)_minmax(0,3fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
-          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/90 p-3 shadow-[0_26px_46px_-36px_rgba(15,23,42,0.8)] dark:border-[#55779f]/65 dark:bg-white/82 dark:shadow-[0_28px_48px_-36px_rgba(0,0,0,0.82)] sm:p-2">
-            <Announcements duckAudio={isAnnouncing && voiceEnabled} />
-          </div>
-
-          <div className="min-h-0 rounded-3xl border border-slate-200 bg-[#163a5f]/95 p-4 shadow-[0_28px_48px_-38px_rgba(15,23,42,0.82)] dark:border-[#55779f]/65 dark:bg-white/86 dark:shadow-[0_30px_52px_-38px_rgba(0,0,0,0.84)] sm:p-2">
-            {isLoading ? (
-              <div className="flex h-full min-h-22.5 items-center justify-center text-sm text-[#20539A] dark:text-[#c2d6f1]">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cargando tickets...
-              </div>
-            ) : null}
-
-            {!isLoading && errorMessage ? (
-              <div className="space-y-3 rounded-2xl border border-amber-400/35 bg-amber-50/70 p-4 text-sm text-amber-800 dark:border-amber-300/35 dark:bg-amber-100/10 dark:text-amber-100">
-                <p>{errorMessage}</p>
-                <Button type="button" size="sm" variant="outline" onClick={onReload}>
-                  Reintentar
-                </Button>
-              </div>
-            ) : null}
-
-            {!isLoading && !errorMessage && tickets.length > 0 ? (
-              <div className="grid h-full grid-cols-1 gap-3 overflow-auto pr-1 sm:grid-cols-6">
-                {tickets.map((ticket) => {
-                  const ticketAlertKey = `${ticket.id}:${ticket.calledAt ?? ticket.createdAt}`;
-                  const isRecentlyCalled = highlightedKeySet.has(ticketAlertKey);
-
-                  return (
-                    <ClientTicketDisplay
-                      key={ticket.id}
-                      code={ticket.code}
-                      window={ticket.windowName}
-                      type={ticket.type}
-                      isRecentlyCalled={isRecentlyCalled}
-                    />
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {!isLoading && !errorMessage && tickets.length === 0 ? (
-              <div className="flex h-full min-h-22.5 items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-slate-50/80 p-4 text-center text-sm text-slate-600 dark:border-[#5f82ac]/50 dark:bg-[#173a5e]/70 dark:text-[#c6d9f2]">
-                {requiresConfiguration ? (
-                  <div className="space-y-3">
-                    <p>Configure la pantalla para empezar a recibir tickets llamados.</p>
-                    <Button type="button" size="sm" variant="outline" onClick={onOpenSettings}>
-                      <Settings2 className="mr-2 h-4 w-4" />
-                      Abrir configuracion
-                    </Button>
-                  </div>
-                ) : (
-                  "No hay tickets llamados para los servicios seleccionados."
-                )}
-              </div>
-            ) : null}
-          </div>
+          <TickerFooter />
         </section>
       </div>
     </main>

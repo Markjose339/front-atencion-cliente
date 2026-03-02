@@ -5,14 +5,8 @@ import { PublicDisplayCalledTicket } from "@/types/public-display";
 
 const formatWindowName = (windowName: string): string => {
   const normalized = windowName.trim();
-  if (!normalized) {
-    return "ventanilla";
-  }
-
-  if (normalized.toLowerCase().includes("ventanilla")) {
-    return normalized;
-  }
-
+  if (!normalized) return "ventanilla";
+  if (normalized.toLowerCase().includes("ventanilla")) return normalized;
   return `ventanilla ${normalized}`;
 };
 
@@ -27,7 +21,10 @@ type UseTicketAnnouncerReturn = {
   voiceEnabled: boolean;
   isAnnouncing: boolean;
   setVoiceEnabled: (enabled: boolean) => void;
+
   announceTicket: (ticket: PublicDisplayCalledTicket) => void;
+
+  notifyOperator: () => void;
 };
 
 type QueuedAnnouncement = {
@@ -36,8 +33,6 @@ type QueuedAnnouncement = {
 };
 
 const PROCESSED_ANNOUNCEMENT_LIMIT = 200;
-const NOTIFICATION_SEQUENCE_DURATION_MS = 380;
-const FIRST_NOTIFICATION_PRIME_DELAY_MS = 220;
 
 export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
   const isVoiceSupported = useMemo(
@@ -45,7 +40,7 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
     [],
   );
 
-  const [voiceEnabled, setVoiceEnabledState] = useState<boolean>(true);
+  const [voiceEnabled, setVoiceEnabledState] = useState(true);
   const [isAnnouncing, setIsAnnouncing] = useState(false);
   const voiceEnabledRef = useRef(true);
 
@@ -54,28 +49,14 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
   const processedKeys = useRef<string[]>([]);
   const speakingInProgress = useRef(false);
   const notificationPrimedRef = useRef(false);
+
   const { playNotification, unlockAudio } = useNotificationSound();
 
-  const playPreAnnouncementNotification = useCallback(async () => {
-    if (!notificationPrimedRef.current) {
-      await unlockAudio();
-      notificationPrimedRef.current = true;
-
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, FIRST_NOTIFICATION_PRIME_DELAY_MS);
-      });
-    }
-
-    await playNotification();
-    await new Promise<void>((resolve) => {
-      window.setTimeout(resolve, NOTIFICATION_SEQUENCE_DURATION_MS);
-    });
-
-    await playNotification();
-    await new Promise<void>((resolve) => {
-      window.setTimeout(resolve, NOTIFICATION_SEQUENCE_DURATION_MS);
-    });
-  }, [playNotification, unlockAudio]);
+  const primeAudioOnce = useCallback(async () => {
+    if (notificationPrimedRef.current) return;
+    await unlockAudio();
+    notificationPrimedRef.current = true;
+  }, [unlockAudio]);
 
   const clearQueue = useCallback(() => {
     ticketQueue.current = [];
@@ -85,7 +66,7 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
   }, []);
 
   const hasProcessedKey = useCallback(
-    (key: string): boolean => processedKeys.current.includes(key),
+    (key: string) => processedKeys.current.includes(key),
     [],
   );
 
@@ -103,9 +84,7 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
         return;
       }
 
-      if (speakingInProgress.current) {
-        return;
-      }
+      if (speakingInProgress.current) return;
 
       const nextItem = ticketQueue.current.shift();
       if (!nextItem) {
@@ -118,9 +97,7 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
 
       const onDone = (markAsProcessed = true) => {
         queuedKeys.current.delete(nextItem.key);
-        if (markAsProcessed) {
-          rememberProcessedKey(nextItem.key);
-        }
+        if (markAsProcessed) rememberProcessedKey(nextItem.key);
 
         speakingInProgress.current = false;
         setIsAnnouncing(false);
@@ -139,14 +116,15 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
         utterance.pitch = 1.02;
         utterance.volume = 1;
 
-        utterance.onend = () => onDone();
-        utterance.onerror = () => onDone();
+        utterance.onend = () => onDone(true);
+        utterance.onerror = () => onDone(true);
 
         window.speechSynthesis.speak(utterance);
       };
 
       const runAnnouncement = async () => {
-        await playPreAnnouncementNotification();
+        await primeAudioOnce();
+        await playNotification("tv");
         speakTicket();
       };
 
@@ -154,16 +132,14 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
     };
 
     playNext();
-  }, [clearQueue, isVoiceSupported, playPreAnnouncementNotification, rememberProcessedKey]);
+  }, [clearQueue, isVoiceSupported, playNotification, primeAudioOnce, rememberProcessedKey]);
 
   const setVoiceEnabled = useCallback(
     (enabled: boolean) => {
       voiceEnabledRef.current = enabled;
       setVoiceEnabledState(enabled);
 
-      if (!isVoiceSupported) {
-        return;
-      }
+      if (!isVoiceSupported) return;
 
       if (!enabled) {
         window.speechSynthesis.cancel();
@@ -178,15 +154,10 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
 
   const announceTicket = useCallback(
     (ticket: PublicDisplayCalledTicket) => {
-      if (!isVoiceSupported || !voiceEnabledRef.current) {
-        return;
-      }
+      if (!isVoiceSupported || !voiceEnabledRef.current) return;
 
       const key = `${ticket.id}:${ticket.calledAt ?? ticket.createdAt}`;
-
-      if (queuedKeys.current.has(key) || hasProcessedKey(key)) {
-        return;
-      }
+      if (queuedKeys.current.has(key) || hasProcessedKey(key)) return;
 
       ticketQueue.current.push({ key, ticket });
       queuedKeys.current.add(key);
@@ -195,11 +166,17 @@ export function useTicketAnnouncer(): UseTicketAnnouncerReturn {
     [hasProcessedKey, isVoiceSupported, playNextFromQueue],
   );
 
+  const notifyOperator = useCallback(async () => {
+    await primeAudioOnce();
+    await playNotification("operator");
+  }, [playNotification, primeAudioOnce]);
+
   return {
     isVoiceSupported,
     voiceEnabled,
     isAnnouncing,
     setVoiceEnabled,
     announceTicket,
+    notifyOperator,
   };
 }

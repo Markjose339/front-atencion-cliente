@@ -1,29 +1,20 @@
-﻿export const ADVERTISEMENT_MEDIA_TYPES = ["IMAGE", "VIDEO"] as const;
+export const ADVERTISEMENT_MEDIA_TYPES = ["IMAGE", "VIDEO", "TEXT"] as const;
 
-export const ADVERTISEMENT_DISPLAY_MODES = [
-  "FULLSCREEN",
-  "BANNER_TOP",
-  "BANNER_BOTTOM",
-  "SPLIT_LEFT",
-  "SPLIT_RIGHT",
-] as const;
-
-export const ADVERTISEMENT_TRANSITIONS = ["NONE", "FADE", "SLIDE"] as const;
+export const ADVERTISEMENT_DISPLAY_MODES = ["FULLSCREEN", "TICKER"] as const;
 
 export type AdvertisementMediaType = (typeof ADVERTISEMENT_MEDIA_TYPES)[number];
 export type AdvertisementDisplayMode = (typeof ADVERTISEMENT_DISPLAY_MODES)[number];
-export type AdvertisementTransition = (typeof ADVERTISEMENT_TRANSITIONS)[number];
 
 export interface Advertisement {
   id: string;
   title: string;
-  description: string | null;
-  fileUrl: string;
   mediaType: AdvertisementMediaType;
   displayMode: AdvertisementDisplayMode;
-  transition: AdvertisementTransition;
-  durationSeconds: number;
-  sortOrder: number;
+  textContent: string | null;
+  filePath: string | null;
+  mimeType: string | null;
+  fileSize: number | null;
+  fileUrl: string | null;
   isActive: boolean;
   startsAt: string | null;
   endsAt: string | null;
@@ -34,7 +25,6 @@ export interface Advertisement {
 export interface AdvertisementOptions {
   mediaTypes: AdvertisementMediaType[];
   displayModes: AdvertisementDisplayMode[];
-  transitions: AdvertisementTransition[];
 }
 
 export interface AdvertisementListQuery {
@@ -49,22 +39,20 @@ export interface AdvertisementListQuery {
 
 export interface AdvertisementCreateInput {
   title: string;
-  description?: string;
-  file: File;
+  mediaType: AdvertisementMediaType;
   displayMode: AdvertisementDisplayMode;
-  transition: AdvertisementTransition;
-  durationSeconds: number;
-  sortOrder: number;
+  textContent?: string | null;
+  file?: File;
   isActive: boolean;
   startsAt?: string | null;
   endsAt?: string | null;
 }
 
 export interface AdvertisementUpdateInput {
+  mediaType: AdvertisementMediaType;
   displayMode: AdvertisementDisplayMode;
-  transition: AdvertisementTransition;
-  durationSeconds: number;
-  sortOrder: number;
+  textContent?: string | null;
+  file?: File;
   isActive: boolean;
   startsAt?: string | null;
   endsAt?: string | null;

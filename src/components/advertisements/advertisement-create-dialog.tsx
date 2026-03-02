@@ -1,13 +1,17 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
-import { useAdvertisementOptionsQuery, humanizeDisplayMode, humanizeTransition } from "@/hooks/use-advertisements";
-import { useAdvertisementsMutation } from "@/hooks/use-advertisements";
+import {
+  humanizeDisplayMode,
+  humanizeMediaType,
+  useAdvertisementOptionsQuery,
+  useAdvertisementsMutation,
+} from "@/hooks/use-advertisements";
 import { extractApiErrorMessage, extractApiFieldErrors } from "@/lib/api-error";
 import {
   AdvertisementCreateSchemaType,
@@ -15,9 +19,12 @@ import {
 } from "@/lib/schemas/advertisement.schema";
 import {
   ADVERTISEMENT_DISPLAY_MODES,
-  ADVERTISEMENT_TRANSITIONS,
+  ADVERTISEMENT_MEDIA_TYPES,
+  AdvertisementMediaType,
 } from "@/types/advertisement";
 
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
@@ -28,10 +35,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -40,6 +43,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -50,12 +55,10 @@ import {
 
 const createFieldNames = [
   "title",
-  "description",
-  "file",
+  "mediaType",
   "displayMode",
-  "transition",
-  "durationSeconds",
-  "sortOrder",
+  "textContent",
+  "file",
   "isActive",
   "startsAt",
   "endsAt",
@@ -63,16 +66,26 @@ const createFieldNames = [
 
 type CreateFieldName = (typeof createFieldNames)[number];
 
-const defaultValues: Omit<AdvertisementCreateSchemaType, "file"> = {
+const defaultValues: Omit<AdvertisementCreateSchemaType, "title"> & { title: string } = {
   title: "",
-  description: "",
+  mediaType: "IMAGE",
   displayMode: "FULLSCREEN",
-  transition: "NONE",
-  durationSeconds: 10,
-  sortOrder: 0,
+  textContent: "",
   isActive: true,
   startsAt: "",
   endsAt: "",
+};
+
+const resolveFileAccept = (mediaType: AdvertisementMediaType): string => {
+  if (mediaType === "IMAGE") {
+    return "image/*";
+  }
+
+  if (mediaType === "VIDEO") {
+    return "video/*";
+  }
+
+  return "image/*,video/*";
 };
 
 export function AdvertisementCreateDialog() {
@@ -87,9 +100,8 @@ export function AdvertisementCreateDialog() {
   const options = useMemo(
     () =>
       findAdvertisementOptions.data ?? {
-        mediaTypes: [],
+        mediaTypes: [...ADVERTISEMENT_MEDIA_TYPES],
         displayModes: [...ADVERTISEMENT_DISPLAY_MODES],
-        transitions: [...ADVERTISEMENT_TRANSITIONS],
       },
     [findAdvertisementOptions.data],
   );
@@ -99,6 +111,18 @@ export function AdvertisementCreateDialog() {
     defaultValues,
   });
 
+  const mediaType = useWatch({
+    control: form.control,
+    name: "mediaType",
+  }) ?? defaultValues.mediaType;
+
+  const textContentValue = useWatch({
+    control: form.control,
+    name: "textContent",
+  }) ?? "";
+
+  const isTextMedia = mediaType === "TEXT";
+
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -107,8 +131,7 @@ export function AdvertisementCreateDialog() {
     };
   }, [previewUrl]);
 
-  const resetDialogState = () => {
-    form.reset(defaultValues);
+  const clearFilePreview = () => {
     setPreviewUrl((previous) => {
       if (previous) {
         URL.revokeObjectURL(previous);
@@ -118,6 +141,23 @@ export function AdvertisementCreateDialog() {
     });
     setPreviewMediaType(null);
     setFileInputKey((previous) => previous + 1);
+  };
+
+  const handleMediaTypeChange = (nextMediaType: AdvertisementMediaType) => {
+    form.setValue("mediaType", nextMediaType, { shouldValidate: true, shouldDirty: true });
+
+    if (nextMediaType === "TEXT") {
+      form.setValue("file", undefined, { shouldValidate: true, shouldDirty: true });
+      clearFilePreview();
+      return;
+    }
+
+    form.setValue("textContent", "", { shouldValidate: false, shouldDirty: true });
+  };
+
+  const resetDialogState = () => {
+    form.reset(defaultValues);
+    clearFilePreview();
   };
 
   const handleOpenChange = (nextValue: boolean) => {
@@ -146,7 +186,7 @@ export function AdvertisementCreateDialog() {
   };
 
   const handleFileChange = (file: File | undefined) => {
-    form.setValue("file", file as File, { shouldValidate: true, shouldDirty: true });
+    form.setValue("file", file, { shouldValidate: true, shouldDirty: true });
 
     setPreviewUrl((previous) => {
       if (previous) {
@@ -200,7 +240,7 @@ export function AdvertisementCreateDialog() {
         <DialogHeader>
           <DialogTitle>Crear publicidad</DialogTitle>
           <DialogDescription>
-            Cargue un archivo de imagen o video y configure su reproduccion.
+            Configure el tipo de contenido y su modo de reproduccion.
           </DialogDescription>
         </DialogHeader>
 
@@ -226,47 +266,39 @@ export function AdvertisementCreateDialog() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descripcion (opcional)</FormLabel>
-                      <FormControl>
-                        <textarea
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          placeholder="Texto descriptivo de la publicidad"
-                          disabled={create.isPending}
-                          className="border-input bg-transparent shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 min-h-20 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="file"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Archivo</FormLabel>
-                      <FormControl>
-                        <Input
-                          key={fileInputKey}
-                          type="file"
-                          accept="image/*,video/*"
-                          onChange={(event) => handleFileChange(event.target.files?.[0])}
-                          disabled={create.isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="mediaType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de media</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) =>
+                            handleMediaTypeChange(value as AdvertisementMediaType)
+                          }
+                          disabled={create.isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Seleccione" />
+                            </SelectTrigger>
+                          </FormControl>
+
+                          <SelectContent>
+                            {options.mediaTypes.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {humanizeMediaType(option)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="displayMode"
@@ -296,56 +328,41 @@ export function AdvertisementCreateDialog() {
                       </FormItem>
                     )}
                   />
+                </div>
 
+                {isTextMedia ? (
                   <FormField
                     control={form.control}
-                    name="transition"
+                    name="textContent"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Transicion</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          disabled={create.isPending}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {options.transitions.map((transition) => (
-                              <SelectItem key={transition} value={transition}>
-                                {humanizeTransition(transition)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Contenido de texto</FormLabel>
+                        <FormControl>
+                          <textarea
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            placeholder="Texto que se mostrara en la franja"
+                            disabled={create.isPending}
+                            className="border-input bg-transparent shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 min-h-24 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                ) : (
                   <FormField
                     control={form.control}
-                    name="durationSeconds"
-                    render={({ field }) => (
+                    name="file"
+                    render={() => (
                       <FormItem>
-                        <FormLabel>Duracion (segundos)</FormLabel>
+                        <FormLabel>Archivo</FormLabel>
                         <FormControl>
                           <Input
-                            type="number"
-                            min={1}
-                            step={1}
-                            value={
-                              field.value === undefined || field.value === null
-                                ? ""
-                                : String(field.value)
-                            }
-                            onChange={(event) => field.onChange(event.target.value)}
+                            key={fileInputKey}
+                            type="file"
+                            accept={resolveFileAccept(mediaType)}
+                            onChange={(event) => handleFileChange(event.target.files?.[0])}
                             disabled={create.isPending}
                           />
                         </FormControl>
@@ -353,32 +370,7 @@ export function AdvertisementCreateDialog() {
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="sortOrder"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Orden</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={1}
-                            value={
-                              field.value === undefined || field.value === null
-                                ? ""
-                                : String(field.value)
-                            }
-                            onChange={(event) => field.onChange(event.target.value)}
-                            disabled={create.isPending}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField
@@ -450,7 +442,13 @@ export function AdvertisementCreateDialog() {
               <div className="space-y-3">
                 <p className="text-sm font-medium">Preview local</p>
                 <div className="flex min-h-56 items-center justify-center rounded-lg border bg-muted/20 p-3">
-                  {previewUrl && previewMediaType === "image" ? (
+                  {isTextMedia ? (
+                    <p className="line-clamp-8 text-sm text-muted-foreground">
+                      {textContentValue.trim() || "Escriba el contenido para previsualizar el texto."}
+                    </p>
+                  ) : null}
+
+                  {!isTextMedia && previewUrl && previewMediaType === "image" ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={previewUrl}
@@ -459,7 +457,7 @@ export function AdvertisementCreateDialog() {
                     />
                   ) : null}
 
-                  {previewUrl && previewMediaType === "video" ? (
+                  {!isTextMedia && previewUrl && previewMediaType === "video" ? (
                     <video
                       src={previewUrl}
                       controls
@@ -469,7 +467,7 @@ export function AdvertisementCreateDialog() {
                     />
                   ) : null}
 
-                  {!previewUrl ? (
+                  {!isTextMedia && !previewUrl ? (
                     <p className="text-center text-sm text-muted-foreground">
                       Seleccione un archivo para ver la previsualizacion.
                     </p>

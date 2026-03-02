@@ -1,4 +1,4 @@
-﻿import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import {
@@ -13,18 +13,20 @@ import { ApiResponse } from "@/types/api-response";
 import {
   ADVERTISEMENT_DISPLAY_MODES,
   ADVERTISEMENT_MEDIA_TYPES,
-  ADVERTISEMENT_TRANSITIONS,
   Advertisement,
   AdvertisementCreateInput,
   AdvertisementDisplayMode,
   AdvertisementListQuery,
   AdvertisementMediaType,
   AdvertisementOptions,
-  AdvertisementTransition,
   AdvertisementUpdateInput,
 } from "@/types/advertisement";
 
 type UnknownRecord = Record<string, unknown>;
+
+type AdvertisementUpdatePayload = Omit<AdvertisementUpdateInput, "mediaType" | "file"> & {
+  textContent?: string | null;
+};
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -105,15 +107,9 @@ const normalizeAdvertisementOptions = (payload: unknown): AdvertisementOptions =
     ADVERTISEMENT_DISPLAY_MODES,
   );
 
-  const transitions = normalizeEnumArray<AdvertisementTransition>(
-    source ? readOptionsArray(source, ["transitions", "transition"]) : [],
-    ADVERTISEMENT_TRANSITIONS,
-  );
-
   return {
     mediaTypes: mediaTypes.length > 0 ? mediaTypes : [...ADVERTISEMENT_MEDIA_TYPES],
     displayModes: displayModes.length > 0 ? displayModes : [...ADVERTISEMENT_DISPLAY_MODES],
-    transitions: transitions.length > 0 ? transitions : [...ADVERTISEMENT_TRANSITIONS],
   };
 };
 
@@ -129,32 +125,16 @@ const normalizePlaylistResponse = (payload: unknown): Advertisement[] => {
   return [];
 };
 
-const buildCreatePayload = (values: AdvertisementCreateParsedSchemaType): FormData => {
-  const payload: AdvertisementCreateInput = {
-    title: values.title.trim(),
-    description: values.description,
-    file: values.file,
-    displayMode: values.displayMode,
-    transition: values.transition,
-    durationSeconds: values.durationSeconds,
-    sortOrder: values.sortOrder,
-    isActive: values.isActive,
-    startsAt: toISOOrNull(values.startsAt),
-    endsAt: toISOOrNull(values.endsAt),
-  };
-
-  const formData = new FormData();
-  formData.append("title", payload.title);
-
-  if (payload.description && payload.description.trim().length > 0) {
-    formData.append("description", payload.description.trim());
-  }
-
-  formData.append("file", payload.file);
+const appendFormDataBaseFields = (
+  formData: FormData,
+  payload: {
+    displayMode: AdvertisementDisplayMode;
+    isActive: boolean;
+    startsAt: string | null;
+    endsAt: string | null;
+  },
+) => {
   formData.append("displayMode", payload.displayMode);
-  formData.append("transition", payload.transition);
-  formData.append("durationSeconds", String(payload.durationSeconds));
-  formData.append("sortOrder", String(payload.sortOrder));
   formData.append("isActive", String(payload.isActive));
 
   if (payload.startsAt) {
@@ -164,19 +144,63 @@ const buildCreatePayload = (values: AdvertisementCreateParsedSchemaType): FormDa
   if (payload.endsAt) {
     formData.append("endsAt", payload.endsAt);
   }
+};
+
+const buildCreatePayload = (
+  values: AdvertisementCreateParsedSchemaType,
+): AdvertisementCreateInput | FormData => {
+  const payloadBase = {
+    title: values.title.trim(),
+    mediaType: values.mediaType,
+    displayMode: values.displayMode,
+    isActive: values.isActive,
+    startsAt: toISOOrNull(values.startsAt),
+    endsAt: toISOOrNull(values.endsAt),
+  };
+
+  if (values.mediaType === "TEXT") {
+    return {
+      ...payloadBase,
+      textContent: values.textContent,
+    };
+  }
+
+  const formData = new FormData();
+  formData.append("title", payloadBase.title);
+  formData.append("mediaType", payloadBase.mediaType);
+  formData.append("file", values.file as File);
+  appendFormDataBaseFields(formData, payloadBase);
 
   return formData;
 };
 
-const buildUpdatePayload = (values: AdvertisementUpdateParsedSchemaType): AdvertisementUpdateInput => ({
-  displayMode: values.displayMode,
-  transition: values.transition,
-  durationSeconds: values.durationSeconds,
-  sortOrder: values.sortOrder,
-  isActive: values.isActive,
-  startsAt: toISOOrNull(values.startsAt),
-  endsAt: toISOOrNull(values.endsAt),
-});
+const buildUpdatePayload = (
+  values: AdvertisementUpdateParsedSchemaType,
+): AdvertisementUpdatePayload | FormData => {
+  const payloadBase = {
+    displayMode: values.displayMode,
+    isActive: values.isActive,
+    startsAt: toISOOrNull(values.startsAt),
+    endsAt: toISOOrNull(values.endsAt),
+  };
+
+  if (values.mediaType === "TEXT") {
+    return {
+      ...payloadBase,
+      textContent: values.textContent,
+    };
+  }
+
+  if (!values.file) {
+    return payloadBase;
+  }
+
+  const formData = new FormData();
+  appendFormDataBaseFields(formData, payloadBase);
+  formData.append("file", values.file);
+
+  return formData;
+};
 
 export function useAdvertisementOptionsQuery() {
   const findAdvertisementOptions = useQuery({
@@ -251,9 +275,7 @@ export function useAdvertisementsPlaylistQuery(displayMode: AdvertisementDisplay
     queryFn: async () => {
       const params = new URLSearchParams({ displayMode });
       const response = await api.get<unknown>(`/advertisements/playlist?${params.toString()}`);
-      const list = normalizePlaylistResponse(response);
-
-      return [...list].sort((a, b) => a.sortOrder - b.sortOrder);
+      return normalizePlaylistResponse(response);
     },
     staleTime: 15_000,
     refetchInterval: 30_000,
@@ -273,6 +295,11 @@ export function useAdvertisementsMutation() {
     mutationFn: (values: AdvertisementCreateSchemaType) => {
       const parsedValues = advertisementCreateSchema.parse(values);
       const payload = buildCreatePayload(parsedValues);
+
+      if (parsedValues.mediaType === "TEXT") {
+        return api.post<Advertisement>("/advertisements", payload);
+      }
+
       return api.post<Advertisement>("/advertisements/upload", payload);
     },
     onSuccess: invalidateAdvertisements,
@@ -356,26 +383,22 @@ export const formatDateTime = (value: string | null): string => {
   });
 };
 
-export const getMediaPreviewType = (mediaType: string): "image" | "video" =>
-  mediaType === "VIDEO" ? "video" : "image";
+export const getMediaPreviewType = (mediaType: string): "image" | "video" | "text" => {
+  if (mediaType === "VIDEO") {
+    return "video";
+  }
+
+  if (mediaType === "TEXT") {
+    return "text";
+  }
+
+  return "image";
+};
 
 export const humanizeDisplayMode = (value: string): string => {
   const labels: Record<string, string> = {
     FULLSCREEN: "Pantalla completa",
-    BANNER_TOP: "Banner superior",
-    BANNER_BOTTOM: "Banner inferior",
-    SPLIT_LEFT: "Split izquierda",
-    SPLIT_RIGHT: "Split derecha",
-  };
-
-  return labels[value] ?? value;
-};
-
-export const humanizeTransition = (value: string): string => {
-  const labels: Record<string, string> = {
-    NONE: "Sin transicion",
-    FADE: "Fade",
-    SLIDE: "Slide",
+    TICKER: "Franja ticker",
   };
 
   return labels[value] ?? value;
@@ -385,6 +408,7 @@ export const humanizeMediaType = (value: string): string => {
   const labels: Record<string, string> = {
     IMAGE: "Imagen",
     VIDEO: "Video",
+    TEXT: "Texto",
   };
 
   return labels[value] ?? value;

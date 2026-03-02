@@ -1,8 +1,9 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 import {
   ADVERTISEMENT_DISPLAY_MODES,
-  ADVERTISEMENT_TRANSITIONS,
+  ADVERTISEMENT_MEDIA_TYPES,
+  AdvertisementMediaType,
 } from "@/types/advertisement";
 
 const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
@@ -23,30 +24,19 @@ const datetimeLocalField = z
     message: "Fecha y hora invalidas",
   });
 
-const optionalDescriptionField = z
+const normalizeOptionalText = z
   .string()
   .optional()
-  .transform((value) => {
-    const normalized = (value ?? "").trim();
-    return normalized.length > 0 ? normalized : "";
-  })
-  .refine((value) => value.length <= 500, {
-    message: "La descripcion no puede exceder 500 caracteres",
-  });
+  .transform((value) => (value ?? "").trim());
 
-const fileField = z
-  .custom<File>((value) => typeof File !== "undefined" && value instanceof File, {
-    message: "El archivo es obligatorio",
+const isFileInstance = (value: unknown): value is File =>
+  typeof File !== "undefined" && value instanceof File;
+
+const optionalFileField = z
+  .custom<File | undefined>((value) => value === undefined || isFileInstance(value), {
+    message: "El archivo es invalido",
   })
-  .refine((file) => file.size > 0, {
-    message: "El archivo es obligatorio",
-  })
-  .refine((file) => file.size <= MAX_FILE_SIZE_BYTES, {
-    message: "El archivo no puede superar 200MB",
-  })
-  .refine((file) => file.type.startsWith("image/") || file.type.startsWith("video/"), {
-    message: "Solo se permiten imagenes o videos",
-  });
+  .optional();
 
 const validateDateRange = (
   values: { startsAt?: string; endsAt?: string },
@@ -72,52 +62,152 @@ const validateDateRange = (
   }
 };
 
-export const advertisementCreateSchema = z
-  .object({
+const validateMediaFile = (
+  file: File,
+  mediaType: AdvertisementMediaType,
+  ctx: z.RefinementCtx,
+) => {
+  if (file.size <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["file"],
+      message: "El archivo es obligatorio",
+    });
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["file"],
+      message: "El archivo no puede superar 200MB",
+    });
+  }
+
+  const isImage = file.type.startsWith("image/");
+  const isVideo = file.type.startsWith("video/");
+
+  if (!isImage && !isVideo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["file"],
+      message: "Solo se permiten imagenes o videos",
+    });
+    return;
+  }
+
+  if (mediaType === "IMAGE" && !isImage) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["file"],
+      message: "Debe subir una imagen",
+    });
+  }
+
+  if (mediaType === "VIDEO" && !isVideo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["file"],
+      message: "Debe subir un video",
+    });
+  }
+};
+
+const advertisementBaseSchema = z.object({
+  mediaType: z.enum(ADVERTISEMENT_MEDIA_TYPES),
+  displayMode: z.enum(ADVERTISEMENT_DISPLAY_MODES),
+  textContent: normalizeOptionalText,
+  file: optionalFileField,
+  isActive: z.boolean(),
+  startsAt: datetimeLocalField,
+  endsAt: datetimeLocalField,
+});
+
+export const advertisementCreateSchema = advertisementBaseSchema
+  .extend({
     title: z
       .string({ message: "El titulo debe ser texto" })
       .trim()
       .min(1, "El titulo es obligatorio")
       .max(150, "El titulo no puede exceder 150 caracteres"),
-    description: optionalDescriptionField,
-    file: fileField,
-    displayMode: z.enum(ADVERTISEMENT_DISPLAY_MODES),
-    transition: z.enum(ADVERTISEMENT_TRANSITIONS),
-    durationSeconds: z.coerce
-      .number({ message: "La duracion es obligatoria" })
-      .int("La duracion debe ser un numero entero")
-      .min(1, "La duracion debe ser al menos 1 segundo")
-      .max(3600, "La duracion no puede exceder 3600 segundos"),
-    sortOrder: z.coerce
-      .number({ message: "El orden es obligatorio" })
-      .int("El orden debe ser un numero entero")
-      .min(0, "El orden no puede ser negativo")
-      .max(999_999, "El orden no puede exceder 999999"),
-    isActive: z.boolean(),
-    startsAt: datetimeLocalField,
-    endsAt: datetimeLocalField,
   })
-  .superRefine((values, ctx) => validateDateRange(values, ctx));
+  .superRefine((values, ctx) => {
+    validateDateRange(values, ctx);
 
-export const advertisementUpdateSchema = z
-  .object({
-    displayMode: z.enum(ADVERTISEMENT_DISPLAY_MODES),
-    transition: z.enum(ADVERTISEMENT_TRANSITIONS),
-    durationSeconds: z.coerce
-      .number({ message: "La duracion es obligatoria" })
-      .int("La duracion debe ser un numero entero")
-      .min(1, "La duracion debe ser al menos 1 segundo")
-      .max(3600, "La duracion no puede exceder 3600 segundos"),
-    sortOrder: z.coerce
-      .number({ message: "El orden es obligatorio" })
-      .int("El orden debe ser un numero entero")
-      .min(0, "El orden no puede ser negativo")
-      .max(999_999, "El orden no puede exceder 999999"),
-    isActive: z.boolean(),
-    startsAt: datetimeLocalField,
-    endsAt: datetimeLocalField,
-  })
-  .superRefine((values, ctx) => validateDateRange(values, ctx));
+    if (values.mediaType === "TEXT") {
+      if (!values.textContent) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["textContent"],
+          message: "El texto es obligatorio para publicidades de tipo texto",
+        });
+      }
+
+      if (values.file) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["file"],
+          message: "No debe subir archivo para publicidades de texto",
+        });
+      }
+
+      return;
+    }
+
+    if (values.textContent) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["textContent"],
+        message: "El texto no aplica para imagenes o videos",
+      });
+    }
+
+    if (!values.file) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["file"],
+        message: "El archivo es obligatorio",
+      });
+      return;
+    }
+
+    validateMediaFile(values.file, values.mediaType, ctx);
+  });
+
+export const advertisementUpdateSchema = advertisementBaseSchema.superRefine((values, ctx) => {
+  validateDateRange(values, ctx);
+
+  if (values.mediaType === "TEXT") {
+    if (!values.textContent) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["textContent"],
+        message: "El texto es obligatorio para publicidades de tipo texto",
+      });
+    }
+
+    if (values.file) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["file"],
+        message: "No debe subir archivo para publicidades de texto",
+      });
+    }
+
+    return;
+  }
+
+  if (values.textContent) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["textContent"],
+      message: "El texto no aplica para imagenes o videos",
+    });
+  }
+
+  if (values.file) {
+    validateMediaFile(values.file, values.mediaType, ctx);
+  }
+});
 
 export type AdvertisementCreateSchemaType = z.input<typeof advertisementCreateSchema>;
 export type AdvertisementCreateParsedSchemaType = z.output<typeof advertisementCreateSchema>;

@@ -13,39 +13,21 @@ import { Loader2, Volume2, WifiOff } from "lucide-react";
 
 import { useAdvertisementsPlaylistQuery } from "@/hooks/use-advertisements";
 import { resolveAdvertisementFileUrl } from "@/lib/advertisement-media";
+import { Advertisement } from "@/types/advertisement";
 import { Button } from "@/components/ui/button";
 
 type AnnouncementsProps = {
   duckAudio?: boolean;
 };
 
-type Advertisement = {
-  id: string;
-  title: string;
-  fileUrl: string;
-  mediaType: "IMAGE" | "VIDEO";
-  durationSeconds?: number | null;
-  transition?: "FADE" | "SLIDE" | null;
-};
-
-const NORMAL_VIDEO_VOLUME = 0.50;
+const NORMAL_VIDEO_VOLUME = 0.5;
 const DUCKED_VIDEO_VOLUME = 0.015;
 const VIDEO_START_TIMEOUT_MS = 3_000;
 const AUTO_UNMUTE_INITIAL_DELAY_MS = 300;
 const AUTO_UNMUTE_RETRY_INTERVAL_MS = 1_000;
 const AUDIO_UNLOCK_SESSION_KEY = "public_display_audio_unlocked_v1";
 const AUDIO_UNLOCK_DETECTION_DELAY_MS = 600;
-
-function getTransitionClass(transition: Advertisement["transition"]): string {
-  switch (transition) {
-    case "FADE":
-      return "animate-in fade-in duration-500";
-    case "SLIDE":
-      return "animate-in slide-in-from-right-4 duration-500";
-    default:
-      return "";
-  }
-}
+const IMAGE_AUTO_ADVANCE_MS = 8_000;
 
 function FullscreenShell({ children }: { children: ReactNode }) {
   return (
@@ -127,8 +109,7 @@ function useImageAutoAdvance(
       return;
     }
 
-    const durationMs = Math.max(advertisement.durationSeconds ?? 5, 1) * 1000;
-    const timerId = window.setTimeout(goToNext, durationMs);
+    const timerId = window.setTimeout(goToNext, IMAGE_AUTO_ADVANCE_MS);
 
     return () => {
       window.clearTimeout(timerId);
@@ -180,9 +161,7 @@ function useVideoAutoUnmute(
     const targetVolume = duckAudio ? DUCKED_VIDEO_VOLUME : NORMAL_VIDEO_VOLUME;
 
     const scheduleRetry = () => {
-      if (cancelled) {
-        return;
-      }
+      if (cancelled) return;
 
       retryId = window.setTimeout(() => {
         void attemptUnmute();
@@ -190,9 +169,7 @@ function useVideoAutoUnmute(
     };
 
     const attemptUnmute = async () => {
-      if (cancelled || inProgress) {
-        return;
-      }
+      if (cancelled || inProgress) return;
 
       inProgress = true;
 
@@ -204,14 +181,10 @@ function useVideoAutoUnmute(
           await video.play();
         } catch {}
 
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         const hasAudiblePlayback = !video.muted && !video.paused;
-        if (hasAudiblePlayback) {
-          return;
-        }
+        if (hasAudiblePlayback) return;
 
         video.muted = true;
         try {
@@ -238,9 +211,7 @@ function useVideoAutoUnmute(
       cancelled = true;
       window.clearTimeout(initialId);
       window.clearTimeout(startGuardId);
-      if (retryId !== null) {
-        window.clearTimeout(retryId);
-      }
+      if (retryId !== null) window.clearTimeout(retryId);
     };
   }, [advertisement, duckAudio, goToNext, playbackStep, videoRef]);
 }
@@ -258,29 +229,20 @@ function useAudioUnlock({
 }) {
   const [audioLocked, setAudioLocked] = useState(false);
   const [sessionUnlocked, setSessionUnlocked] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
+    if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem(AUDIO_UNLOCK_SESSION_KEY) === "1";
   });
 
   useEffect(() => {
-    if (!isVideoActive) {
-      return;
-    }
+    if (!isVideoActive) return;
 
     const video = videoRef.current;
-    if (!video) {
-      return;
-    }
+    if (!video) return;
 
     let cancelled = false;
 
     const probeAudioLock = async () => {
-      if (cancelled) {
-        return;
-      }
+      if (cancelled) return;
 
       video.volume = targetVolume;
       video.muted = false;
@@ -288,15 +250,11 @@ function useAudioUnlock({
       try {
         await video.play();
       } catch {
-        if (!cancelled) {
-          setAudioLocked(true);
-        }
+        if (!cancelled) setAudioLocked(true);
         return;
       }
 
-      if (cancelled) {
-        return;
-      }
+      if (cancelled) return;
 
       const isAudible = !video.muted && !video.paused;
       setAudioLocked(!isAudible);
@@ -315,9 +273,7 @@ function useAudioUnlock({
 
   const unlock = useCallback(async () => {
     const video = videoRef.current;
-    if (!video) {
-      return;
-    }
+    if (!video) return;
 
     video.volume = targetVolume;
     video.muted = false;
@@ -340,22 +296,32 @@ function useAudioUnlock({
 }
 
 export function Announcements({ duckAudio = false }: AnnouncementsProps) {
-  const { playlist } = useAdvertisementsPlaylistQuery("FULLSCREEN");
-  const advertisements = useMemo(() => (playlist.data ?? []) as Advertisement[], [playlist.data]);
+  const { playlist: fullscreenPlaylist } =
+    useAdvertisementsPlaylistQuery("FULLSCREEN");
+
+  const fullscreenAdvertisements = useMemo(
+    () =>
+      ((fullscreenPlaylist.data ?? []) as Advertisement[]).filter(
+        (item) => item.mediaType === "IMAGE" || item.mediaType === "VIDEO",
+      ),
+    [fullscreenPlaylist.data],
+  );
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { safeIndex, playbackStep, goToNext } = usePlaylistIndex(advertisements.length);
+  const { safeIndex, playbackStep, goToNext } = usePlaylistIndex(
+    fullscreenAdvertisements.length,
+  );
 
-  const currentAdvertisement = advertisements[safeIndex] ?? null;
+  const currentAdvertisement = fullscreenAdvertisements[safeIndex] ?? null;
   const currentFileUrl = currentAdvertisement
     ? resolveAdvertisementFileUrl(currentAdvertisement.fileUrl)
     : "";
-  const transitionClass = getTransitionClass(currentAdvertisement?.transition ?? null);
   const mediaKey = currentAdvertisement
     ? `${currentAdvertisement.id}-${playbackStep}`
     : `empty-${playbackStep}`;
   const targetVolume = duckAudio ? DUCKED_VIDEO_VOLUME : NORMAL_VIDEO_VOLUME;
   const isVideoActive = currentAdvertisement?.mediaType === "VIDEO";
+
   const { audioLocked, unlock } = useAudioUnlock({
     videoRef,
     isVideoActive,
@@ -365,9 +331,21 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
 
   useImageAutoAdvance(currentAdvertisement, goToNext, playbackStep);
   useVideoDucking(currentAdvertisement, videoRef, duckAudio, playbackStep);
-  useVideoAutoUnmute(currentAdvertisement, videoRef, duckAudio, goToNext, playbackStep);
+  useVideoAutoUnmute(
+    currentAdvertisement,
+    videoRef,
+    duckAudio,
+    goToNext,
+    playbackStep,
+  );
 
-  if (playlist.isLoading) {
+  useEffect(() => {
+    if (!currentAdvertisement || currentFileUrl) return;
+    const timerId = window.setTimeout(goToNext, 1_500);
+    return () => window.clearTimeout(timerId);
+  }, [currentAdvertisement, currentFileUrl, goToNext]);
+
+  if (fullscreenPlaylist.isLoading) {
     return (
       <FullscreenShell>
         <CenteredMessage>
@@ -378,16 +356,20 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
     );
   }
 
-  if (playlist.error) {
+  if (fullscreenPlaylist.error) {
     return (
       <FullscreenShell>
         <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center text-primary-foreground">
           <WifiOff className="h-8 w-8 opacity-75" />
           <p className="text-sm">
-            {(playlist.error as { message?: string }).message ??
+            {(fullscreenPlaylist.error as { message?: string }).message ??
               "No se pudo cargar la playlist"}
           </p>
-          <Button variant="outline" size="sm" onClick={() => playlist.refetch()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fullscreenPlaylist.refetch()}
+          >
             Reintentar
           </Button>
         </div>
@@ -395,49 +377,47 @@ export function Announcements({ duckAudio = false }: AnnouncementsProps) {
     );
   }
 
-  if (!currentAdvertisement) {
-    return (
-      <FullscreenShell>
-        <CenteredMessage>No hay publicidades activas para mostrar.</CenteredMessage>
-      </FullscreenShell>
-    );
-  }
-
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl bg-black">
-      {isVideoActive ? (
-        <video
-          ref={videoRef}
-          key={mediaKey}
-          src={currentFileUrl}
-          autoPlay
-          playsInline
-          onLoadedMetadata={(event) => {
-            event.currentTarget.volume = targetVolume;
-          }}
-          onEnded={goToNext}
-          onError={goToNext}
-          className={`h-full w-full object-contain ${transitionClass}`}
-        />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={mediaKey}
-          src={currentFileUrl}
-          alt={currentAdvertisement.title}
-          className={`h-full w-full object-contain ${transitionClass}`}
-          loading="eager"
-          decoding="async"
-        />
-      )}
+    <div className="relative h-full w-full overflow-hidden bg-black">
+      <div className="relative h-full min-h-0 overflow-hidden">
+        {!currentAdvertisement ? (
+          <div className="flex h-full items-center justify-center p-4 text-center text-sm text-white/80">
+            No hay publicidades FULLSCREEN activas para mostrar.
+          </div>
+        ) : isVideoActive ? (
+          <video
+            ref={videoRef}
+            key={mediaKey}
+            src={currentFileUrl}
+            autoPlay
+            playsInline
+            onLoadedMetadata={(event) => {
+              event.currentTarget.volume = targetVolume;
+            }}
+            onEnded={goToNext}
+            onError={goToNext}
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={mediaKey}
+            src={currentFileUrl}
+            alt={currentAdvertisement.title}
+            className="h-full w-full object-contain"
+            loading="eager"
+            decoding="async"
+          />
+        )}
 
-      <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/35 via-transparent to-black/10" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/35 via-transparent to-black/10" />
 
-      <div className="absolute bottom-3 right-3 flex items-center justify-end">
-        <DotsIndicator total={advertisements.length} activeIndex={safeIndex} />
+        <div className="absolute bottom-3 right-3 flex items-center justify-end">
+          <DotsIndicator total={fullscreenAdvertisements.length} activeIndex={safeIndex} />
+        </div>
+
+        {isVideoActive && audioLocked ? <AudioUnlockOverlay onUnlock={unlock} /> : null}
       </div>
-
-      {isVideoActive && audioLocked ? <AudioUnlockOverlay onUnlock={unlock} /> : null}
     </div>
   );
 }

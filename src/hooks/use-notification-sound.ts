@@ -1,98 +1,71 @@
 import { useCallback, useEffect, useRef } from "react";
 
-type AudioContextConstructor = typeof AudioContext;
+export type NotificationSoundType = "tv" | "operator";
 
-type WindowWithLegacyAudioContext = Window & {
-  AudioContext?: AudioContextConstructor;
-  webkitAudioContext?: AudioContextConstructor;
-};
-
-const getAudioContextConstructor = (): AudioContextConstructor | null => {
-  if (typeof window === "undefined") return null;
-
-  const browserWindow = window as WindowWithLegacyAudioContext;
-  return browserWindow.AudioContext ?? browserWindow.webkitAudioContext ?? null;
-};
+const waitForEnded = (audio: HTMLAudioElement) =>
+  new Promise<void>((resolve) => {
+    const done = () => resolve();
+    audio.addEventListener("ended", done, { once: true });
+    audio.addEventListener("error", done, { once: true });
+  });
 
 export function useNotificationSound() {
-  const audioContextRef = useRef<AudioContext | null>(null);
-
-  const getAudioContext = useCallback(() => {
-    if (audioContextRef.current) return audioContextRef.current;
-
-    const AudioContextConstructor = getAudioContextConstructor();
-    if (!AudioContextConstructor) return null;
-
-    audioContextRef.current = new AudioContextConstructor();
-    return audioContextRef.current;
-  }, []);
+  const tvAudioRef = useRef<HTMLAudioElement | null>(null);
+  const operatorAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    return () => {
-      const context = audioContextRef.current;
-      if (!context || context.state === "closed") return;
+    if (typeof window === "undefined") return;
 
-      void context.close();
-      audioContextRef.current = null;
+    const tv = new Audio("/alerta-tv-3.mp3");
+    const op = new Audio("/alerta-op.mp3");
+
+    tv.preload = "auto";
+    op.preload = "auto";
+
+
+    tvAudioRef.current = tv;
+    operatorAudioRef.current = op;
+
+    return () => {
+      tvAudioRef.current = null;
+      operatorAudioRef.current = null;
     };
   }, []);
 
-  const playNotification = useCallback(async () => {
-    const context = getAudioContext();
-    if (!context) return;
+  const playNotification = useCallback(async (type: NotificationSoundType = "tv") => {
+    const audio = type === "operator" ? operatorAudioRef.current : tvAudioRef.current;
+    if (!audio) return;
 
-    if (context.state === "suspended") {
-      try {
-        await context.resume();
-      } catch {
-        return;
-      }
+    try {
+      // reiniciar por si estaba sonando
+      audio.pause();
+      audio.currentTime = 0;
+
+      // IMPORTANTE: play() no espera al final, por eso esperamos ended
+      const endedPromise = waitForEnded(audio);
+
+      await audio.play();
+      await endedPromise;
+    } catch {
+      // Si el navegador bloquea autoplay u ocurre error, no bloqueamos el flujo
     }
-
-    const now = context.currentTime;
-    const compressor = context.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-24, now);
-    compressor.knee.setValueAtTime(30, now);
-    compressor.ratio.setValueAtTime(12, now);
-    compressor.attack.setValueAtTime(0.003, now);
-    compressor.release.setValueAtTime(0.25, now);
-    compressor.connect(context.destination);
-
-    const playTone = (offset: number, frequency: number, duration: number) => {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-
-      oscillator.type = "square"; 
-      oscillator.frequency.setValueAtTime(frequency, now + offset);
-
-      gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.9, now + offset + 0.005);
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        now + offset + duration
-      );
-
-      oscillator.connect(gain);
-      gain.connect(compressor);
-
-      oscillator.start(now + offset);
-      oscillator.stop(now + offset + duration + 0.01);
-    };
-
-    playTone(0, 880, 0.14);
-    playTone(0.18, 988, 0.16);
-  }, [getAudioContext]);
+  }, []);
 
   const unlockAudio = useCallback(async () => {
-    const context = getAudioContext();
-    if (!context) return;
+    // “Primar” audio en el primer uso. Si falla, no pasa nada.
+    const audio = tvAudioRef.current;
+    if (!audio) return;
 
-    if (context.state === "suspended") {
-      try {
-        await context.resume();
-      } catch {}
-    }
-  }, [getAudioContext]);
+    try {
+      audio.muted = true;
+      audio.pause();
+      audio.currentTime = 0;
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+    } catch {}
+  }, []);
 
   return { playNotification, unlockAudio };
 }

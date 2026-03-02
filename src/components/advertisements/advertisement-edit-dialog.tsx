@@ -1,18 +1,26 @@
-﻿"use client";
+"use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
-import { useAdvertisementsMutation, humanizeDisplayMode, humanizeTransition, toDateTimeLocalInputValue } from "@/hooks/use-advertisements";
+import {
+  humanizeDisplayMode,
+  humanizeMediaType,
+  toDateTimeLocalInputValue,
+  useAdvertisementsMutation,
+} from "@/hooks/use-advertisements";
+import { resolveAdvertisementFileUrl } from "@/lib/advertisement-media";
 import { extractApiErrorMessage, extractApiFieldErrors } from "@/lib/api-error";
 import {
   AdvertisementUpdateSchemaType,
   advertisementUpdateSchema,
 } from "@/lib/schemas/advertisement.schema";
-import { Advertisement, AdvertisementOptions } from "@/types/advertisement";
+import { Advertisement, AdvertisementMediaType, AdvertisementOptions } from "@/types/advertisement";
 
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -21,10 +29,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -33,6 +37,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -50,9 +56,8 @@ interface AdvertisementEditDialogProps {
 
 const editableFieldNames = [
   "displayMode",
-  "transition",
-  "durationSeconds",
-  "sortOrder",
+  "textContent",
+  "file",
   "isActive",
   "startsAt",
   "endsAt",
@@ -60,13 +65,24 @@ const editableFieldNames = [
 
 type EditableFieldName = (typeof editableFieldNames)[number];
 
+const resolveFileAccept = (mediaType: AdvertisementMediaType): string => {
+  if (mediaType === "IMAGE") {
+    return "image/*";
+  }
+
+  if (mediaType === "VIDEO") {
+    return "video/*";
+  }
+
+  return "image/*,video/*";
+};
+
 const getDefaultValues = (
   advertisement: Advertisement,
 ): AdvertisementUpdateSchemaType => ({
+  mediaType: advertisement.mediaType,
   displayMode: advertisement.displayMode,
-  transition: advertisement.transition,
-  durationSeconds: advertisement.durationSeconds,
-  sortOrder: advertisement.sortOrder,
+  textContent: advertisement.textContent ?? "",
   isActive: advertisement.isActive,
   startsAt: toDateTimeLocalInputValue(advertisement.startsAt),
   endsAt: toDateTimeLocalInputValue(advertisement.endsAt),
@@ -78,12 +94,40 @@ export function AdvertisementEditDialog({
   open,
   onOpenChange,
 }: AdvertisementEditDialogProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewMediaType, setPreviewMediaType] = useState<"image" | "video" | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
+
   const { update } = useAdvertisementsMutation();
 
   const form = useForm<AdvertisementUpdateSchemaType>({
     resolver: zodResolver(advertisementUpdateSchema),
     defaultValues: getDefaultValues(advertisement),
   });
+
+  const mediaType = useWatch({
+    control: form.control,
+    name: "mediaType",
+  }) ?? advertisement.mediaType;
+
+  const textContentValue = useWatch({
+    control: form.control,
+    name: "textContent",
+  }) ?? "";
+
+  const isTextMedia = mediaType === "TEXT";
+
+  const clearFilePreview = () => {
+    setPreviewUrl((previous) => {
+      if (previous) {
+        URL.revokeObjectURL(previous);
+      }
+
+      return null;
+    });
+    setPreviewMediaType(null);
+    setFileInputKey((previous) => previous + 1);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -92,6 +136,28 @@ export function AdvertisementEditDialog({
 
     form.reset(getDefaultValues(advertisement));
   }, [open, advertisement, form]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const currentResolvedFileUrl = useMemo(
+    () => resolveAdvertisementFileUrl(advertisement.fileUrl),
+    [advertisement.fileUrl],
+  );
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      form.setValue("file", undefined, { shouldValidate: false, shouldDirty: false });
+      clearFilePreview();
+    }
+
+    onOpenChange(nextOpen);
+  };
 
   const applyServerFieldErrors = (error: unknown): boolean => {
     const fieldErrors = extractApiFieldErrors(error);
@@ -110,16 +176,42 @@ export function AdvertisementEditDialog({
     return applied;
   };
 
+  const handleFileChange = (file: File | undefined) => {
+    form.setValue("file", file, { shouldValidate: true, shouldDirty: true });
+
+    setPreviewUrl((previous) => {
+      if (previous) {
+        URL.revokeObjectURL(previous);
+      }
+
+      if (!file) {
+        return null;
+      }
+
+      return URL.createObjectURL(file);
+    });
+
+    if (!file) {
+      setPreviewMediaType(null);
+      return;
+    }
+
+    setPreviewMediaType(file.type.startsWith("video/") ? "video" : "image");
+  };
+
   async function onSubmit(values: AdvertisementUpdateSchemaType) {
     form.clearErrors();
 
     try {
       const updated = await update.mutateAsync({
         id: advertisement.id,
-        values,
+        values: {
+          ...values,
+          mediaType: advertisement.mediaType,
+        },
       });
 
-      onOpenChange(false);
+      handleDialogOpenChange(false);
       toast.success(`Publicidad "${updated.title}" actualizada`);
     } catch (error) {
       const hasFieldErrors = applyServerFieldErrors(error);
@@ -134,12 +226,12 @@ export function AdvertisementEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar configuracion de publicidad</DialogTitle>
           <DialogDescription>
-            Ajuste el modo de visualizacion, transicion, duracion, orden y vigencia.
+            Ajuste el modo de visualizacion y la vigencia. El tipo de media no puede cambiar.
           </DialogDescription>
         </DialogHeader>
 
@@ -151,6 +243,13 @@ export function AdvertisementEditDialog({
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Tipo de media</Label>
+                <div className="border-input bg-muted/40 text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm">
+                  {humanizeMediaType(advertisement.mediaType)}
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="displayMode"
@@ -180,56 +279,41 @@ export function AdvertisementEditDialog({
                   </FormItem>
                 )}
               />
+            </div>
 
+            {isTextMedia ? (
               <FormField
                 control={form.control}
-                name="transition"
+                name="textContent"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Transicion</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={update.isPending}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Seleccione una transicion" />
-                        </SelectTrigger>
-                      </FormControl>
-
-                      <SelectContent>
-                        {options.transitions.map((transition) => (
-                          <SelectItem key={transition} value={transition}>
-                            {humanizeTransition(transition)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Contenido de texto</FormLabel>
+                    <FormControl>
+                      <textarea
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        placeholder="Texto que se mostrara en la franja"
+                        disabled={update.isPending}
+                        className="border-input bg-transparent shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 min-h-24 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            ) : (
               <FormField
                 control={form.control}
-                name="durationSeconds"
-                render={({ field }) => (
+                name="file"
+                render={() => (
                   <FormItem>
-                    <FormLabel>Duracion (segundos)</FormLabel>
+                    <FormLabel>Reemplazar archivo (opcional)</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={
-                          field.value === undefined || field.value === null
-                            ? ""
-                            : String(field.value)
-                        }
-                        onChange={(event) => field.onChange(event.target.value)}
+                        key={fileInputKey}
+                        type="file"
+                        accept={resolveFileAccept(advertisement.mediaType)}
+                        onChange={(event) => handleFileChange(event.target.files?.[0])}
                         disabled={update.isPending}
                       />
                     </FormControl>
@@ -237,32 +321,7 @@ export function AdvertisementEditDialog({
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="sortOrder"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Orden</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={
-                          field.value === undefined || field.value === null
-                            ? ""
-                            : String(field.value)
-                        }
-                        onChange={(event) => field.onChange(event.target.value)}
-                        disabled={update.isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
@@ -304,6 +363,59 @@ export function AdvertisementEditDialog({
               />
             </div>
 
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Preview</p>
+              <div className="flex min-h-40 items-center justify-center rounded-lg border bg-muted/20 p-3">
+                {isTextMedia ? (
+                  <p className="line-clamp-7 text-sm text-muted-foreground">
+                    {textContentValue.trim() || "Sin texto"}
+                  </p>
+                ) : null}
+
+                {!isTextMedia && previewUrl && previewMediaType === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewUrl}
+                    alt="Preview del archivo"
+                    className="max-h-40 w-full rounded-md object-contain"
+                  />
+                ) : null}
+
+                {!isTextMedia && previewUrl && previewMediaType === "video" ? (
+                  <video
+                    src={previewUrl}
+                    controls
+                    muted
+                    playsInline
+                    className="max-h-40 w-full rounded-md object-contain"
+                  />
+                ) : null}
+
+                {!isTextMedia && !previewUrl && currentResolvedFileUrl && advertisement.mediaType === "VIDEO" ? (
+                  <video
+                    src={currentResolvedFileUrl}
+                    controls
+                    muted
+                    playsInline
+                    className="max-h-40 w-full rounded-md object-contain"
+                  />
+                ) : null}
+
+                {!isTextMedia && !previewUrl && currentResolvedFileUrl && advertisement.mediaType === "IMAGE" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={currentResolvedFileUrl}
+                    alt={advertisement.title}
+                    className="max-h-40 w-full rounded-md object-contain"
+                  />
+                ) : null}
+
+                {!isTextMedia && !previewUrl && !currentResolvedFileUrl ? (
+                  <p className="text-center text-sm text-muted-foreground">Sin archivo disponible.</p>
+                ) : null}
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="isActive"
@@ -334,7 +446,7 @@ export function AdvertisementEditDialog({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleDialogOpenChange(false)}
                 disabled={update.isPending}
               >
                 Cancelar
