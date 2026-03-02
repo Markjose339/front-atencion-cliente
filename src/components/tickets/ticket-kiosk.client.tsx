@@ -30,13 +30,8 @@ export default function TicketKioskClient() {
   const [sessionKey, setSessionKey] = useState(0)
   const view = useMemo<"setup" | "tickets">(() => (branchId ? "tickets" : "setup"), [branchId])
 
-  // Panel admin oculto
   const [showAdminControls, setShowAdminControls] = useState(false)
-
-  // Fullscreen
   const [isFullscreen, setIsFullscreen] = useState(false)
-
-  // Impresora (QZ Tray)
   const { isConnected: isPrinterConnected, isChecking: isPrinterChecking } = useQZPrinter()
 
   const idleTimer = useRef<number | null>(null)
@@ -52,7 +47,6 @@ export default function TicketKioskClient() {
     toast.success("Configuracion reiniciada")
   }
 
-  // Ctrl + Alt + M => mostrar/ocultar panel admin
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "m") {
@@ -65,7 +59,6 @@ export default function TicketKioskClient() {
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
 
-  // Track estado real de fullscreen
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
     document.addEventListener("fullscreenchange", onFsChange)
@@ -85,7 +78,6 @@ export default function TicketKioskClient() {
     }
   }
 
-  // Reset de sesion por inactividad (solo cuando ya hay sucursal)
   useEffect(() => {
     if (!branchId) return
 

@@ -77,12 +77,14 @@ export function ChoiceCard({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "group relative flex min-h-[8.5rem] w-full items-center gap-5 overflow-hidden rounded-[1.75rem] border-2 p-6 text-left shadow-[0_20px_34px_-24px_rgba(12,62,99,0.55)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_44px_-24px_rgba(12,62,99,0.5)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#20539A]/35 dark:shadow-[0_24px_36px_-24px_rgba(0,0,0,0.75)] dark:focus-visible:ring-[#FDCB35]/35 disabled:cursor-not-allowed disabled:opacity-55",
+        // ✅ 1 columna: no gigante (max-w + centrado)
+        // ✅ 2+ columnas: ocupa toda su columna (lg:max-w-none + lg:mx-0)
+        "group relative mx-auto flex min-h-34 w-full max-w-[560px] items-center gap-5 overflow-hidden rounded-[1.75rem] border-2 p-6 text-left shadow-[0_20px_34px_-24px_rgba(12,62,99,0.55)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_44px_-24px_rgba(12,62,99,0.5)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#20539A]/35 dark:shadow-[0_24px_36px_-24px_rgba(0,0,0,0.75)] dark:focus-visible:ring-[#FDCB35]/35 disabled:cursor-not-allowed disabled:opacity-55 lg:mx-0 lg:max-w-none",
         style.card,
         className,
       )}
     >
-      <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-r opacity-65 transition-opacity duration-300 group-hover:opacity-90", style.glow)} />
+      <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-r opacity-65 transition-opacity duration-300 group-hover:opacity-90", style.glow)} />
       <div className="pointer-events-none absolute -right-7 -top-7 h-24 w-24 rounded-full bg-white/30 blur-lg transition-transform duration-300 group-hover:scale-110 dark:bg-[#FDCB35]/20" />
 
       <div className={cn("relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-transform duration-300 group-hover:scale-105", style.icon)}>
