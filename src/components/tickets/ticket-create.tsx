@@ -108,9 +108,7 @@ export function TicketCreate({ branchId }: Props) {
       reset()
     } catch (error) {
       const message =
-        typeof error === "object" &&
-        error !== null &&
-        "message" in error
+        typeof error === "object" && error !== null && "message" in error
           ? String((error as { message: unknown }).message)
           : "No se pudo generar el ticket"
 
@@ -202,19 +200,17 @@ export function TicketCreate({ branchId }: Props) {
                     />
                   </div>
                 ) : (
-                  <div className="mx-auto w-full max-w-[560px] rounded-3xl border-2 border-[#20539A]/30 bg-white p-5 sm:p-6 lg:mx-0 lg:max-w-none">
-                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#114591]">
+                  <div className="mx-auto w-full max-w-140 rounded-3xl border-2 border-[#20539A]/60 bg-[#c7dbff] p-5 shadow-lg sm:p-6 dark:border-[#7ea2d3]/55 dark:bg-[#0f2f4e] md:mx-0 md:max-w-none">
+                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0C3E63] dark:text-[#d2e1f8]">
                       <Package className="h-4 w-4" />
                       Codigo de rastreo
                     </label>
 
                     <Input
                       value={packageCode}
-                      onChange={(e) =>
-                        setPackageCode(e.target.value.toUpperCase())
-                      }
+                      onChange={(e) => setPackageCode(e.target.value.toUpperCase())}
                       placeholder="Ej: EN000001LP"
-                      className="h-12 rounded-xl"
+                      className="h-12 rounded-xl bg-white/80 dark:bg-[#0b243b]/70"
                       disabled={loading}
                       maxLength={25}
                     />

@@ -37,7 +37,7 @@ const toneStyles: Record<ChoiceCardTone, ChoiceCardToneStyle> = {
     card:
       "border-[#114591] bg-[linear-gradient(150deg,#edf4ff_0%,#dce9ff_45%,#c9dcff_100%)] text-[#0C3E63] hover:border-[#0C3E63] dark:border-[#6d95cc]/80 dark:bg-[linear-gradient(150deg,#234f83_0%,#1b446f_48%,#213661_100%)] dark:text-[#f3f8ff] dark:hover:border-[#9cbce6]",
     icon: "bg-white/92 text-[#114591] ring-1 ring-[#20539A]/35 dark:bg-[#12395f]/80 dark:text-[#f3f8ff] dark:ring-[#6f97ce]/65",
-    badge: "border-[#20539A]/40 bg-white/92 text-[#114591] dark:border-[#6c93c9]/70 dark:bg-[#16436d]/75 dark:text-[#e8f2ff]",
+    badge: "border-[#20539A]/40 bg-white/92 text-[#114591] dark:border-[#6c93c9]/70 dark:bg-[#16436d]/75 dark:text-[#e8f1f8]",
     arrow: "border-[#20539A]/35 bg-white/92 text-[#114591] dark:border-[#6f97cc]/65 dark:bg-[#16436d]/80 dark:text-[#e6f0ff]",
     glow: "from-[#20539A]/45 via-transparent to-[#114591]/45 dark:from-[#20539A]/42 dark:to-[#5b81b4]/30",
   },
@@ -77,23 +77,36 @@ export function ChoiceCard({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        // ✅ 1 columna: no gigante (max-w + centrado)
-        // ✅ 2+ columnas: ocupa toda su columna (lg:max-w-none + lg:mx-0)
-        "group relative mx-auto flex min-h-34 w-full max-w-[560px] items-center gap-5 overflow-hidden rounded-[1.75rem] border-2 p-6 text-left shadow-[0_20px_34px_-24px_rgba(12,62,99,0.55)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_44px_-24px_rgba(12,62,99,0.5)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#20539A]/35 dark:shadow-[0_24px_36px_-24px_rgba(0,0,0,0.75)] dark:focus-visible:ring-[#FDCB35]/35 disabled:cursor-not-allowed disabled:opacity-55 lg:mx-0 lg:max-w-none",
+        "group relative mx-auto flex min-h-34 w-full max-w-140 items-center gap-5 overflow-hidden rounded-[1.75rem] border-2 p-6 text-left shadow-[0_20px_34px_-24px_rgba(12,62,99,0.55)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_44px_-24px_rgba(12,62,99,0.5)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#20539A]/35 dark:shadow-[0_24px_36px_-24px_rgba(0,0,0,0.75)] dark:focus-visible:ring-[#FDCB35]/35 disabled:cursor-not-allowed disabled:opacity-55 md:mx-0 md:max-w-none",
         style.card,
         className,
       )}
     >
-      <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-r opacity-65 transition-opacity duration-300 group-hover:opacity-90", style.glow)} />
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-r opacity-65 transition-opacity duration-300 group-hover:opacity-90",
+          style.glow,
+        )}
+      />
       <div className="pointer-events-none absolute -right-7 -top-7 h-24 w-24 rounded-full bg-white/30 blur-lg transition-transform duration-300 group-hover:scale-110 dark:bg-[#FDCB35]/20" />
 
-      <div className={cn("relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-transform duration-300 group-hover:scale-105", style.icon)}>
+      <div
+        className={cn(
+          "relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-transform duration-300 group-hover:scale-105",
+          style.icon,
+        )}
+      >
         {icon}
       </div>
 
       <div className="relative flex min-w-0 flex-1 flex-col gap-1.5">
         {badge ? (
-          <span className={cn("w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.11em]", style.badge)}>
+          <span
+            className={cn(
+              "w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.11em]",
+              style.badge,
+            )}
+          >
             {badge}
           </span>
         ) : null}
@@ -102,7 +115,12 @@ export function ChoiceCard({
         <p className="text-sm text-current/80">{description}</p>
       </div>
 
-      <div className={cn("relative shrink-0 rounded-full border p-2 text-current transition-transform duration-300 group-hover:translate-x-1", style.arrow)}>
+      <div
+        className={cn(
+          "relative shrink-0 rounded-full border p-2 text-current transition-transform duration-300 group-hover:translate-x-1",
+          style.arrow,
+        )}
+      >
         <ChevronRight className="h-5 w-5" />
       </div>
 
