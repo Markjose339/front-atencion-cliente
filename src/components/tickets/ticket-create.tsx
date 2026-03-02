@@ -19,18 +19,20 @@ import { Input } from "@/components/ui/input"
 import { usePublicServicesByBranch } from "@/hooks/use-public"
 import { useTicketsMutation } from "@/hooks/use-tickets"
 import { PublicService } from "@/types/public"
+import { Ticket as TicketModel } from "@/types/ticket"
 
 type TicketType = "REGULAR" | "PREFERENCIAL"
 type Step = "service" | "tracking" | "type"
 
 type Props = {
   branchId: string
+  onPrintTicket?: (ticket: TicketModel) => Promise<boolean>
 }
 
 const isAdmissionService = (service?: PublicService): boolean =>
   service?.abbreviation?.toUpperCase() === "ADM"
 
-export function TicketCreate({ branchId }: Props) {
+export function TicketCreate({ branchId, onPrintTicket }: Props) {
   const [step, setStep] = useState<Step>("service")
   const [serviceId, setServiceId] = useState("")
   const [wantsCode, setWantsCode] = useState<boolean | null>(null)
@@ -105,6 +107,9 @@ export function TicketCreate({ branchId }: Props) {
       })
 
       toast.success(`Ticket ${ticket.code} generado`)
+      if (onPrintTicket) {
+        void onPrintTicket(ticket)
+      }
       reset()
     } catch (error) {
       const message =

@@ -32,7 +32,11 @@ export default function TicketKioskClient() {
 
   const [showAdminControls, setShowAdminControls] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const { isConnected: isPrinterConnected, isChecking: isPrinterChecking } = useQZPrinter()
+  const {
+    isConnected: isPrinterConnected,
+    isChecking: isPrinterChecking,
+    printTicket,
+  } = useQZPrinter()
 
   const idleTimer = useRef<number | null>(null)
 
@@ -155,7 +159,7 @@ export default function TicketKioskClient() {
 
         <div className="flex h-full justify-center items-center">
           <div className="min-h-0 flex-1">
-            <TicketCreate key={sessionKey} branchId={branchId} />
+            <TicketCreate key={sessionKey} branchId={branchId} onPrintTicket={printTicket} />
           </div>
         </div>
       </div>
