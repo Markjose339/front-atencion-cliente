@@ -29,10 +29,6 @@ type AdminMenuProps = {
   onOpenSettings: () => void;
 };
 
-/**
- * Floating admin menu — shown only when the operator presses Ctrl+Shift+M.
- * Styled to feel like a secure, professional control panel.
- */
 export function AdminMenu({
   isDarkTheme,
   voiceEnabled,

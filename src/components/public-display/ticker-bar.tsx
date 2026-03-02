@@ -29,21 +29,19 @@ export function TickerBar({ items, speed = 120, gapMs = 500 }: TickerBarProps) {
 
   const cleanItems = useMemo(
     () => items.map((t) => (t ?? "").trim()).filter(Boolean),
-    [items]
+    [items],
   );
 
   const safeIndex = cleanItems.length ? index % cleanItems.length : 0;
   const current = cleanItems[safeIndex] ?? "";
 
   const { ref: wrapRef, width: wrapWidth } = useContainerWidth<HTMLDivElement>();
-
   const [textWidth, setTextWidth] = useState(0);
 
   useLayoutEffect(() => {
-    if (ghostRef.current) {
-      setTextWidth(ghostRef.current.scrollWidth);
-    }
-  }, [current]);
+    if (!ghostRef.current) return;
+    setTextWidth(ghostRef.current.scrollWidth);
+  }, [current, wrapWidth]); 
 
   const ready = cleanItems.length > 0 && wrapWidth > 0 && textWidth > 0;
   const fromX = wrapWidth;
@@ -53,12 +51,13 @@ export function TickerBar({ items, speed = 120, gapMs = 500 }: TickerBarProps) {
 
   useEffect(() => {
     if (!ready || travelSec <= 0) return;
-    const id = window.setTimeout(
-      () => setIndex((p) => p + 1),
-      travelSec * 1000 + gapMs
-    );
+
+    const id = window.setTimeout(() => {
+      setIndex((p) => p + 1);
+    }, travelSec * 1000 + gapMs);
+
     return () => window.clearTimeout(id);
-  }, [ready, travelSec, gapMs, safeIndex]);
+  }, [ready, travelSec, gapMs, index]);
 
   return (
     <div ref={wrapRef} className="relative h-12 w-full overflow-hidden">
@@ -77,7 +76,7 @@ export function TickerBar({ items, speed = 120, gapMs = 500 }: TickerBarProps) {
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${safeIndex}-${current}`}
+            key={index}
             className="absolute left-0 top-0 flex h-full items-center whitespace-nowrap pl-24 pr-8 text-sm font-medium tracking-wide text-[#E8F0FA]"
             initial={{ x: fromX, opacity: 0 }}
             animate={{

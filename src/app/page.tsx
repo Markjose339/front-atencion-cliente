@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { PublicDisplayBoard } from "@/components/public-display/public-display-board";
 import {
   PublicDisplaySetup,
   PublicDisplaySetupStep,
@@ -19,15 +18,28 @@ import { usePublicDisplayCalls, usePublicDisplayConfig } from "@/hooks/use-publi
 import { usePublicBranches, usePublicServicesByBranch } from "@/hooks/use-public";
 import { useTicketAnnouncer } from "@/hooks/use-ticket-announcer";
 import { PublicDisplayCalledTicket } from "@/types/public-display";
+import { PublicDisplayBoard } from "@/components/public-display/public-display-board";
 
-const uniqueIds = (values: string[]): string[] =>
-  Array.from(new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)));
+const MAX_VISIBLE = 12;
 const VISUAL_ALERT_DURATION_MS = 30_000;
 const VISUAL_ALERT_MAX_ITEMS = 20;
+
+const uniqueIds = (values: string[]): string[] =>
+  Array.from(new Set(values.map((v) => v.trim()).filter((v) => v.length > 0)));
+
+function upsertQueue(
+  prev: PublicDisplayCalledTicket[],
+  incoming: PublicDisplayCalledTicket,
+): PublicDisplayCalledTicket[] {
+  const id = String(incoming.id);
+  const withoutDup = prev.filter((x) => String(x.id) !== id);
+  return [incoming, ...withoutDup].slice(0, MAX_VISIBLE);
+}
 
 export default function Home() {
   const { data: branches = [], isLoading: loadingBranches } = usePublicBranches();
   const { config, isConfigReady, saveConfig } = usePublicDisplayConfig();
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [setupStep, setSetupStep] = useState<PublicDisplaySetupStep>("branch");
 
@@ -41,17 +53,24 @@ export default function Home() {
 
   const { isVoiceSupported, voiceEnabled, isAnnouncing, setVoiceEnabled, announceTicket } =
     useTicketAnnouncer();
+
   const [highlightedCallKeys, setHighlightedCallKeys] = useState<string[]>([]);
   const visualAlertTimersRef = useRef<Record<string, number>>({});
 
   const requiresConfiguration = isConfigReady && !config;
 
+  const scopeKey = `${config?.branchId ?? ""}:${(config?.serviceIds ?? []).join("|")}`;
+  const [displayTickets, setDisplayTickets] = useState<PublicDisplayCalledTicket[]>([]);
+  const [lastSeededScopeKey, setLastSeededScopeKey] = useState<string | null>(null);
+
+  if (lastSeededScopeKey !== null && lastSeededScopeKey !== scopeKey) {
+    setLastSeededScopeKey(scopeKey);
+    setDisplayTickets([]);
+  }
+
   const clearVisualAlertTimer = useCallback((key: string) => {
     const timerId = visualAlertTimersRef.current[key];
-    if (typeof timerId !== "number") {
-      return;
-    }
-
+    if (typeof timerId !== "number") return;
     window.clearTimeout(timerId);
     delete visualAlertTimersRef.current[key];
   }, []);
@@ -64,9 +83,7 @@ export default function Home() {
 
       setHighlightedCallKeys((previous) => {
         const withNew = previous.includes(key) ? previous : [key, ...previous];
-        if (withNew.length <= VISUAL_ALERT_MAX_ITEMS) {
-          return withNew;
-        }
+        if (withNew.length <= VISUAL_ALERT_MAX_ITEMS) return withNew;
 
         const kept = withNew.slice(0, VISUAL_ALERT_MAX_ITEMS);
         const removed = withNew.slice(VISUAL_ALERT_MAX_ITEMS);
@@ -82,23 +99,53 @@ export default function Home() {
     [clearVisualAlertTimer],
   );
 
-  const handleIncomingCall = useCallback(
-    (ticket: PublicDisplayCalledTicket) => {
-      queueVisualAlert(ticket);
-      announceTicket(ticket);
-    },
-    [announceTicket, queueVisualAlert],
-  );
-
   useEffect(
     () => () => {
-      Object.values(visualAlertTimersRef.current).forEach((timerId) => {
-        window.clearTimeout(timerId);
-      });
+      Object.values(visualAlertTimersRef.current).forEach((id) => window.clearTimeout(id));
       visualAlertTimersRef.current = {};
     },
     [],
   );
+
+  const handleIncomingCall = useCallback(
+    (ticket: PublicDisplayCalledTicket) => {
+      queueVisualAlert(ticket);
+      announceTicket(ticket);
+      setDisplayTickets((prev) => upsertQueue(prev, ticket));
+    },
+    [announceTicket, queueVisualAlert],
+  );
+
+  const displayCalls = usePublicDisplayCalls({
+    branchId: config?.branchId ?? null,
+    serviceIds: config?.serviceIds ?? [],
+    maxItems: MAX_VISIBLE,
+    onIncomingCall: handleIncomingCall,
+  });
+
+  useEffect(() => {
+    if (!displayCalls.tickets?.length) return;
+    if (lastSeededScopeKey === scopeKey) return;
+
+    setLastSeededScopeKey(scopeKey);
+    setDisplayTickets(displayCalls.tickets.slice(0, MAX_VISIBLE));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayCalls.tickets, scopeKey]);
+
+  const selectedBranch = useMemo(
+    () => branches.find((branch) => branch.id === config?.branchId) ?? null,
+    [branches, config?.branchId],
+  );
+
+  const selectedServiceNames = useMemo(() => {
+    if (!config) return [];
+
+    const servicesById = new Map(
+      (displayServicesQuery.data ?? []).map((service) => [service.serviceId, service.serviceName]),
+    );
+
+    return config.serviceIds.map((serviceId) => servicesById.get(serviceId) ?? serviceId);
+  }, [config, displayServicesQuery.data]);
 
   const openSettings = (nextStep?: PublicDisplaySetupStep) => {
     const nextBranchId = config?.branchId ?? "";
@@ -107,30 +154,6 @@ export default function Home() {
     setSetupStep(nextStep ?? (nextBranchId ? "services" : "branch"));
     setSettingsOpen(true);
   };
-
-  const displayCalls = usePublicDisplayCalls({
-    branchId: config?.branchId ?? null,
-    serviceIds: config?.serviceIds ?? [],
-    maxItems: 12,
-    onIncomingCall: handleIncomingCall,
-  });
-
-  const selectedBranch = useMemo(
-    () => branches.find((branch) => branch.id === config?.branchId) ?? null,
-    [branches, config?.branchId],
-  );
-
-  const selectedServiceNames = useMemo(() => {
-    if (!config) {
-      return [];
-    }
-
-    const servicesById = new Map(
-      (displayServicesQuery.data ?? []).map((service) => [service.serviceId, service.serviceName]),
-    );
-
-    return config.serviceIds.map((serviceId) => servicesById.get(serviceId) ?? serviceId);
-  }, [config, displayServicesQuery.data]);
 
   const handleSelectBranch = (branchId: string) => {
     setDraftBranchId(branchId);
@@ -145,7 +168,7 @@ export default function Home() {
   const handleToggleService = (serviceId: string) => {
     setDraftServiceIds((previous) =>
       previous.includes(serviceId)
-        ? previous.filter((value) => value !== serviceId)
+        ? previous.filter((v) => v !== serviceId)
         : [...previous, serviceId],
     );
   };
@@ -159,8 +182,8 @@ export default function Home() {
     const availableServiceIds = new Set(
       (setupServicesQuery.data ?? []).map((service) => service.serviceId),
     );
-    const filteredServiceIds = uniqueIds(draftServiceIds).filter((serviceId) =>
-      availableServiceIds.has(serviceId),
+    const filteredServiceIds = uniqueIds(draftServiceIds).filter((id) =>
+      availableServiceIds.has(id),
     );
 
     if (filteredServiceIds.length === 0) {
@@ -168,20 +191,13 @@ export default function Home() {
       return;
     }
 
-    saveConfig({
-      branchId: draftBranchId,
-      serviceIds: filteredServiceIds,
-    });
-
+    saveConfig({ branchId: draftBranchId, serviceIds: filteredServiceIds });
     setSettingsOpen(false);
     toast.success("Pantalla configurada correctamente");
   };
 
-  const handleOpenSettings = () => {
-    openSettings();
-  };
-
   const handleReload = async () => {
+    setLastSeededScopeKey(null);
     await displayCalls.refetch();
     toast.success("Pantalla actualizada");
   };
@@ -195,7 +211,7 @@ export default function Home() {
       <PublicDisplayBoard
         branchName={selectedBranch?.name ?? "Pantalla sin configurar"}
         selectedServiceNames={selectedServiceNames}
-        tickets={displayCalls.tickets}
+        tickets={displayTickets}
         isLoading={displayCalls.isLoading}
         isFetching={displayCalls.isFetching}
         errorMessage={displayCalls.error?.message ?? null}
@@ -206,13 +222,10 @@ export default function Home() {
         requiresConfiguration={requiresConfiguration}
         onToggleVoice={handleToggleVoice}
         onReload={handleReload}
-        onOpenSettings={handleOpenSettings}
+        onOpenSettings={() => openSettings()}
       />
 
-      <Sheet
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-      >
+      <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
         <SheetContent
           side="right"
           className="w-full overflow-y-auto border-l-[#20539A]/20 sm:max-w-2xl"

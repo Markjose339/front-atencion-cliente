@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Settings2 } from "lucide-react";
+import { motion } from "motion/react";
 
 import { PublicDisplayCalledTicket } from "@/types/public-display";
 import { ClientTicketDisplay } from "@/components/public-display/client-ticket-display";
@@ -15,6 +16,8 @@ type TicketGridProps = {
   onReload: () => void;
   onOpenSettings: () => void;
 };
+
+const sig = (t: PublicDisplayCalledTicket) => `${t.id}:${t.calledAt ?? t.createdAt}`;
 
 export function TicketGrid({
   tickets,
@@ -62,19 +65,34 @@ export function TicketGrid({
         )}
 
         {!isLoading && !errorMessage && tickets.length > 0 && (
-          <div className="grid h-full grid-cols-1  grid-rows-2 gap-3 overflow-auto sm:grid-cols-6">
+          <div className="grid h-full grid-cols-1 grid-rows-2 gap-3 overflow-auto sm:grid-cols-6">
             {tickets.map((ticket) => {
-              const ticketAlertKey = `${ticket.id}:${ticket.calledAt ?? ticket.createdAt}`;
+              const ticketAlertKey = sig(ticket);
               const isRecentlyCalled = highlightedKeySet.has(ticketAlertKey);
 
               return (
-                <ClientTicketDisplay
-                  key={ticket.id}
-                  code={ticket.code}
-                  window={ticket.windowName}
-                  type={ticket.type}
-                  isRecentlyCalled={isRecentlyCalled}
-                />
+                <motion.div
+                  key={String(ticket.id)}          
+                  layout                           
+                  initial={false}                  
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: isRecentlyCalled ? 1.03 : 1,
+                  }}
+                  transition={{
+                    duration: 0.55,
+                    ease: "easeInOut",
+                  }}
+                  className="transform-gpu will-change-transform"
+                >
+                  <ClientTicketDisplay
+                    code={ticket.code}
+                    window={ticket.windowName}
+                    type={ticket.type}
+                    isRecentlyCalled={isRecentlyCalled}
+                  />
+                </motion.div>
               );
             })}
           </div>

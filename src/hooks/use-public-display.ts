@@ -38,17 +38,10 @@ const compactTicketList = (
 
 const parseSocketTicketPayload = (payload: unknown): PublicDisplayCalledTicket | null => {
   const parsed = publicDisplaySocketTicketPayloadSchema.safeParse(payload);
-  if (!parsed.success) {
-    return null;
-  }
+  if (!parsed.success) return null;
 
-  if ("ticket" in parsed.data) {
-    return parsed.data.ticket;
-  }
-
-  if ("data" in parsed.data) {
-    return parsed.data.data;
-  }
+  if ("ticket" in parsed.data) return parsed.data.ticket;
+  if ("data" in parsed.data) return parsed.data.data;
 
   return parsed.data;
 };
@@ -63,42 +56,33 @@ const parseStoredConfig = (value: string): PublicDisplayConfig | null => {
   try {
     const parsedJson: unknown = JSON.parse(value);
     const parsedConfig = publicDisplayConfigSchema.safeParse(parsedJson);
-
-    if (!parsedConfig.success) {
-      return null;
-    }
-
+    if (!parsedConfig.success) return null;
     return parsedConfig.data;
   } catch {
     return null;
   }
 };
 
+// ---------------------------------------------------------------------------
+// Config storage utilities
+// ---------------------------------------------------------------------------
+
 export function getPublicDisplayConfig(): PublicDisplayConfig | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
+  if (typeof window === "undefined") return null;
 
   const rawConfig = window.localStorage.getItem(PUBLIC_DISPLAY_CONFIG_KEY);
-  if (!rawConfig) {
-    return null;
-  }
+  if (!rawConfig) return null;
 
   return parseStoredConfig(rawConfig);
 }
 
 const getPublicDisplayConfigSnapshot = (): string | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+  if (typeof window === "undefined") return null;
   return window.localStorage.getItem(PUBLIC_DISPLAY_CONFIG_KEY);
 };
 
 export function setPublicDisplayConfig(config: PublicDisplayConfig): void {
-  if (typeof window === "undefined") {
-    return;
-  }
+  if (typeof window === "undefined") return;
 
   const parsed = publicDisplayConfigSchema.parse(config);
   window.localStorage.setItem(PUBLIC_DISPLAY_CONFIG_KEY, JSON.stringify(parsed));
@@ -106,9 +90,7 @@ export function setPublicDisplayConfig(config: PublicDisplayConfig): void {
 }
 
 export function clearPublicDisplayConfig(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
+  if (typeof window === "undefined") return;
 
   window.localStorage.removeItem(PUBLIC_DISPLAY_CONFIG_KEY);
   window.dispatchEvent(new Event(PUBLIC_DISPLAY_CONFIG_EVENT));
@@ -129,19 +111,11 @@ const useIsClient = (): boolean =>
   useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
 const subscribePublicDisplayConfig = (onStoreChange: () => void) => {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
+  if (typeof window === "undefined") return () => {};
 
   const handleStorage = (event: StorageEvent) => {
-    if (event.storageArea !== window.localStorage) {
-      return;
-    }
-
-    if (event.key && event.key !== PUBLIC_DISPLAY_CONFIG_KEY) {
-      return;
-    }
-
+    if (event.storageArea !== window.localStorage) return;
+    if (event.key && event.key !== PUBLIC_DISPLAY_CONFIG_KEY) return;
     onStoreChange();
   };
 
@@ -174,13 +148,12 @@ export function usePublicDisplayConfig(): UsePublicDisplayConfigReturn {
     clearPublicDisplayConfig();
   }, []);
 
-  return {
-    config,
-    isConfigReady,
-    saveConfig,
-    clearConfig,
-  };
+  return { config, isConfigReady, saveConfig, clearConfig };
 }
+
+// ---------------------------------------------------------------------------
+// usePublicDisplayCalls
+// ---------------------------------------------------------------------------
 
 type UsePublicDisplayCallsOptions = {
   branchId: string | null;
@@ -209,6 +182,7 @@ export function usePublicDisplayCalls({
   onIncomingCall,
 }: UsePublicDisplayCallsOptions): UsePublicDisplayCallsReturn {
   const { socket } = useSocket();
+
   const normalizedServiceIds = useMemo(
     () => normalizeServiceIds(serviceIds),
     [serviceIds],
@@ -258,9 +232,7 @@ export function usePublicDisplayCalls({
   );
 
   const tickets = useMemo(() => {
-    if (!enabled) {
-      return [];
-    }
+    if (!enabled) return [];
 
     if (liveTicketState && liveTicketState.scopeKey === scopeKey) {
       return liveTicketState.tickets;
@@ -270,19 +242,11 @@ export function usePublicDisplayCalls({
   }, [enabled, liveTicketState, scopeKey, snapshotTickets]);
 
   useEffect(() => {
-    if (!socket || !enabled) {
-      return;
-    }
+    if (!socket || !enabled) return;
 
     Promise.all(
       normalizedServiceIds.map((serviceId) =>
-        joinPublicQueue(
-          {
-            branchId: normalizedBranchId,
-            serviceId,
-          },
-          socket,
-        ).catch((error) => {
+        joinPublicQueue({ branchId: normalizedBranchId, serviceId }, socket).catch((error) => {
           console.error("No se pudo registrar cola publica", error);
         }),
       ),
@@ -292,13 +256,8 @@ export function usePublicDisplayCalls({
 
     const upsertTicket = (payload: unknown) => {
       const incomingTicket = parseSocketTicketPayload(payload);
-      if (!incomingTicket) {
-        return;
-      }
-
-      if (!isTicketInScope(incomingTicket, normalizedBranchId, normalizedServiceIds)) {
-        return;
-      }
+      if (!incomingTicket) return;
+      if (!isTicketInScope(incomingTicket, normalizedBranchId, normalizedServiceIds)) return;
 
       setLiveTicketState((previousState) => {
         const previousTickets =
@@ -319,13 +278,8 @@ export function usePublicDisplayCalls({
 
     const handleTicketUpdated = (payload: unknown) => {
       const incomingTicket = parseSocketTicketPayload(payload);
-      if (!incomingTicket) {
-        return;
-      }
-
-      if (!isTicketInScope(incomingTicket, normalizedBranchId, normalizedServiceIds)) {
-        return;
-      }
+      if (!incomingTicket) return;
+      if (!isTicketInScope(incomingTicket, normalizedBranchId, normalizedServiceIds)) return;
 
       if (incomingTicket.status === "LLAMADO") {
         setLiveTicketState((previousState) => {
@@ -359,13 +313,8 @@ export function usePublicDisplayCalls({
 
     const removeTicket = (payload: unknown) => {
       const incomingTicket = parseSocketTicketPayload(payload);
-      if (!incomingTicket) {
-        return;
-      }
-
-      if (!isTicketInScope(incomingTicket, normalizedBranchId, normalizedServiceIds)) {
-        return;
-      }
+      if (!incomingTicket) return;
+      if (!isTicketInScope(incomingTicket, normalizedBranchId, normalizedServiceIds)) return;
 
       setLiveTicketState((previousState) => {
         const previousTickets =

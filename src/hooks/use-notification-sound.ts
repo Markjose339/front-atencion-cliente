@@ -37,34 +37,33 @@ export function useNotificationSound() {
     if (!audio) return;
 
     try {
-      // reiniciar por si estaba sonando
       audio.pause();
       audio.currentTime = 0;
 
-      // IMPORTANTE: play() no espera al final, por eso esperamos ended
       const endedPromise = waitForEnded(audio);
 
       await audio.play();
       await endedPromise;
     } catch {
-      // Si el navegador bloquea autoplay u ocurre error, no bloqueamos el flujo
     }
   }, []);
 
   const unlockAudio = useCallback(async () => {
-    // “Primar” audio en el primer uso. Si falla, no pasa nada.
     const audio = tvAudioRef.current;
     if (!audio) return;
 
     try {
-      audio.muted = true;
       audio.pause();
       audio.currentTime = 0;
+      const prevVolume = audio.volume;
+      audio.volume = 0;
+
       await audio.play();
       audio.pause();
       audio.currentTime = 0;
-      audio.muted = false;
-    } catch {}
+
+      audio.volume = prevVolume;
+    } catch { }
   }, []);
 
   return { playNotification, unlockAudio };
