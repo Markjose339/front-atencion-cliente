@@ -14,6 +14,7 @@ export interface CustomerServiceTicket {
   id: string;
   code: string;
   packageCode: string | null;
+  packageZone: string | null;
   type: CustomerServiceTicketType;
   status: TicketStatus;
   branchId: string;

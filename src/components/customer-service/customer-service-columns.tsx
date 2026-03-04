@@ -28,8 +28,13 @@ export const customerServiceColumns = (): ColumnDef<CustomerServiceTicket>[] => 
   },
   {
     accessorKey: "packageCode",
-    header: "Paquete",
+    header: "Codigo de Paquete",
     cell: ({ row }) => row.original.packageCode || "-",
+  },
+  {
+    accessorKey: "packageZone",
+    header: "Zona de Paquete",
+    cell: ({ row }) => row.original.packageZone || "-",
   },
   {
     accessorKey: "type",
