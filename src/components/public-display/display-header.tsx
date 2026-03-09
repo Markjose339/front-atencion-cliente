@@ -7,10 +7,6 @@ type DisplayHeaderProps = {
   voiceEnabled: boolean;
 };
 
-/**
- * Top panel that renders the Announcements board.
- * Styled with a deep navy glass finish — feels like a premium bank lobby screen.
- */
 export function DisplayHeader({ isAnnouncing, voiceEnabled }: DisplayHeaderProps) {
   return (
     <div
@@ -21,8 +17,7 @@ export function DisplayHeader({ isAnnouncing, voiceEnabled }: DisplayHeaderProps
         "border-b border-[#00529C]/30 dark:border-[#4A7BA5]/40",
       ].join(" ")}
     >
-      {/* Subtle gold accent line at top */}
-      <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-transparent via-[#C6A856] to-transparent opacity-70" />
+      <div className="absolute inset-x-0 top-0 h-0.75 bg-linear-to-r from-transparent via-[#C6A856] to-transparent opacity-70" />
 
       <Announcements duckAudio={isAnnouncing && voiceEnabled} />
     </div>

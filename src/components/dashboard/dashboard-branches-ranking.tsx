@@ -85,7 +85,7 @@ export function DashboardBranchesRanking({
       <CardContent>
         <ChartContainer
           config={rankingChartConfig}
-          className="aspect-auto h-[360px] w-full"
+          className="aspect-auto h-90 w-full"
         >
           <BarChart
             data={rows}

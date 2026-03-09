@@ -49,7 +49,7 @@ export function DashboardBranchServicesDonut({
       <CardContent className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
         <ChartContainer
           config={servicesChartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className="aspect-auto h-62.5 w-full"
         >
           <PieChart>
             <ChartTooltip

@@ -47,7 +47,7 @@ export function DashboardAreaChart({
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={areaConfig} className="aspect-auto h-[250px] w-full">
+        <ChartContainer config={areaConfig} className="aspect-auto h-62.5 w-full">
           <AreaChart data={data} margin={{ left: 8, right: 8, top: 8, bottom: 2 }}>
             <defs>
               <linearGradient id="areaCreated" x1="0" y1="0" x2="0" y2="1">

@@ -37,7 +37,7 @@ export function DashboardBranchWindowsChart({
       <CardContent>
         <ChartContainer
           config={windowsChartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className="aspect-auto h-62.5 w-full"
         >
           <BarChart data={data} layout="vertical" margin={{ left: 8, right: 14, top: 8, bottom: 8 }}>
             <CartesianGrid horizontal={false} strokeDasharray="3 3" />

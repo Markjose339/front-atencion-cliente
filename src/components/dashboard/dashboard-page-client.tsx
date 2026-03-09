@@ -34,7 +34,7 @@ export function DashboardPageClient() {
 
   if (panelQuery.isLoading && !panel) {
     return (
-      <div className="mx-auto w-full max-w-[1500px] space-y-4">
+      <div className="mx-auto w-full max-w-375 space-y-4">
         <section className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Dashboard Operativo
@@ -50,7 +50,7 @@ export function DashboardPageClient() {
 
   if (!panel && panelQuery.error) {
     return (
-      <div className="mx-auto w-full max-w-[1500px] space-y-4">
+      <div className="mx-auto w-full max-w-375 space-y-4">
         <section className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Dashboard Operativo
@@ -73,7 +73,7 @@ export function DashboardPageClient() {
 
   if (!panel) {
     return (
-      <div className="mx-auto w-full max-w-[1500px] space-y-4">
+      <div className="mx-auto w-full max-w-375 space-y-4">
         <section className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Dashboard Operativo
@@ -88,7 +88,7 @@ export function DashboardPageClient() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] space-y-5">
+    <div className="mx-auto w-full max-w-375 space-y-5">
       <section className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
           Dashboard Operativo
