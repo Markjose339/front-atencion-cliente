@@ -130,6 +130,17 @@ export function CustomerServiceWorkspace() {
     ? `${selectedOption.branchId}:${selectedOption.serviceId}`
     : "";
 
+  const rateUrl = useMemo(() => {
+    if (!selectedOption) return "/rate";
+
+    const params = new URLSearchParams({
+      branchId: selectedOption.branchId,
+      windowId: selectedOption.windowId,
+    });
+
+    return `/rate?${params.toString()}`;
+  }, [selectedOption]);
+
   const updateURL = useCallback(
     (next: { page: number; limit: number; search: string; branchId?: string; serviceId?: string }) => {
       const params = new URLSearchParams();
@@ -656,6 +667,7 @@ export function CustomerServiceWorkspace() {
       <CustomerServiceHeader
         selectedOption={selectedOption}
         canChangeWindow={options.length > 1}
+        rateUrl={rateUrl}
         onChangeWindow={handleChangeWindow}
         onCallNext={onCallNext}
         isCallingNext={callNextTicket.isPending}

@@ -1,4 +1,5 @@
-import { Building2, MonitorDot, PhoneCall } from "lucide-react";
+import { Building2, MessageSquare, MonitorDot, PhoneCall } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { CustomerServiceWindowOption } from "@/types/customer-service";
 interface CustomerServiceHeaderProps {
   selectedOption: CustomerServiceWindowOption;
   canChangeWindow: boolean;
+  rateUrl: string;
   onChangeWindow: () => void;
   onCallNext: () => void;
   isCallingNext: boolean;
@@ -16,6 +18,7 @@ interface CustomerServiceHeaderProps {
 export function CustomerServiceHeader({
   selectedOption,
   canChangeWindow,
+  rateUrl,
   onChangeWindow,
   onCallNext,
   isCallingNext,
@@ -46,6 +49,13 @@ export function CustomerServiceHeader({
             Cambiar ventanilla
           </Button>
         )}
+
+        <Button type="button" variant="secondary" asChild>
+          <Link href={rateUrl} target="_blank" rel="noopener noreferrer">
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Abrir /rate
+          </Link>
+        </Button>
 
         <Button type="button" onClick={onCallNext} disabled={disableCallNext}>
           <PhoneCall className="mr-2 h-4 w-4" />
