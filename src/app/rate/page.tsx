@@ -55,6 +55,8 @@ const FACE_OPTIONS: FaceOption[] = [
   { score: 5, label: "Excelente", icon: Laugh, colorClassName: "text-emerald-600" },
 ];
 
+const THANK_YOU_DURATION_MS = 2800;
+
 const normalizeScopeValue = (value: string | null): string => (value ?? "").trim();
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
@@ -157,7 +159,11 @@ export default function RatePage() {
   const [scoreSelection, setScoreSelection] = useState<{ ticketId: string; score: number } | null>(
     null,
   );
+  const [thankYouState, setThankYouState] = useState<{ scopeKey: string; ticketId: string } | null>(
+    null,
+  );
   const submittingRef = useRef(false);
+  const thankYouTimerRef = useRef<number | null>(null);
 
   const ticketState = useMemo(() => {
     if (!liveTicketState) return null;
@@ -178,6 +184,41 @@ export default function RatePage() {
 
     return null;
   }, [ticketState, scoreSelection]);
+
+  const clearThankYouTimer = useCallback(() => {
+    if (thankYouTimerRef.current === null) return;
+    window.clearTimeout(thankYouTimerRef.current);
+    thankYouTimerRef.current = null;
+  }, []);
+
+  const triggerThankYouFlow = useCallback(
+    (ticketId: string) => {
+      clearThankYouTimer();
+
+      setThankYouState({ scopeKey, ticketId });
+      setScoreSelection(null);
+      setLiveTicketState((previous) => {
+        if (!previous || previous.scopeKey !== scopeKey) return previous;
+        return { scopeKey, ticket: null };
+      });
+
+      thankYouTimerRef.current = window.setTimeout(() => {
+        setThankYouState((previous) => {
+          if (!previous) return previous;
+          if (previous.scopeKey !== scopeKey || previous.ticketId !== ticketId) return previous;
+          return null;
+        });
+        thankYouTimerRef.current = null;
+      }, THANK_YOU_DURATION_MS);
+    },
+    [clearThankYouTimer, scopeKey],
+  );
+
+  useEffect(() => {
+    return () => {
+      clearThankYouTimer();
+    };
+  }, [clearThankYouTimer]);
 
   const applyIncomingTicketState = useCallback(
     (payload: unknown) => {
@@ -243,74 +284,36 @@ export default function RatePage() {
       !ticketState.isRated &&
       ticketState.canRate,
   );
+  const showThankYouMessage = Boolean(thankYouState && thankYouState.scopeKey === scopeKey);
+  const showRatingOnly = canRateTicket && !showThankYouMessage;
+  const showTicketAndStatusCards = !showRatingOnly && !showThankYouMessage;
 
   const isSubmitting = createTicketRating.isPending;
   const disableScoreSelection = !canRateTicket || isSubmitting;
 
-  const statusMessage = useMemo(() => {
-    if (!ticketState) return "Sin ticket activo";
+  const submitScore = useCallback(
+    async (score: number) => {
+      if (!ticketState) return;
+      if (ticketState.isRated) return;
+      if (!canRateTicket) return;
+      if (isSubmitting) return;
+      if (submittingRef.current) return;
 
-    if (ticketState.isRated) {
-      return "Ticket ya calificado. Gracias por su opinion.";
-    }
-
-    if (ticketState.status === "ATENDIENDO") {
-      return "Espere a que finalice la atencion para calificar";
-    }
-
-    if (ticketState.status === "ESPERA" || ticketState.isPaused) {
-      return "Atencion pausada";
-    }
-
-    if (ticketState.status === "FINALIZADO") {
-      if (!ticketState.canRate) {
-        return "Ticket finalizado. Calificacion no habilitada.";
-      }
-
-      return "Seleccione una calificacion para enviar";
-    }
-
-    return `Estado actual: ${ticketState.status}`;
-  }, [ticketState]);
-
-  const submitScore = useCallback(async (score: number) => {
-    if (!ticketState) return;
-    if (ticketState.isRated) return;
-    if (!canRateTicket) return;
-    if (isSubmitting) return;
-    if (submittingRef.current) return;
-
-    const ticketId = ticketState.ticketId;
-    submittingRef.current = true;
-    setScoreSelection({ ticketId, score });
-
-    try {
-      await createTicketRating.mutateAsync({ ticketId, score });
-
+      const ticketId = ticketState.ticketId;
+      submittingRef.current = true;
       setScoreSelection({ ticketId, score });
 
-      setLiveTicketState((previous) => {
-        if (!previous || previous.scopeKey !== scopeKey || !previous.ticket) return previous;
-        if (previous.ticket.ticketId !== ticketId) return previous;
-
-        return {
-          scopeKey,
-          ticket: {
-            ...previous.ticket,
-            isRated: true,
-            canRate: false,
-            rating: score,
-          },
-        };
-      });
-
-      toast.success("Calificacion enviada correctamente");
-    } catch (error) {
-      toast.error(extractApiErrorMessage(error, "No se pudo enviar la calificacion"));
-    } finally {
-      submittingRef.current = false;
-    }
-  }, [ticketState, canRateTicket, isSubmitting, createTicketRating, scopeKey]);
+      try {
+        await createTicketRating.mutateAsync({ ticketId, score });
+        triggerThankYouFlow(ticketId);
+      } catch (error) {
+        toast.error(extractApiErrorMessage(error, "No se pudo enviar la calificacion"));
+      } finally {
+        submittingRef.current = false;
+      }
+    },
+    [ticketState, canRateTicket, isSubmitting, createTicketRating, triggerThankYouFlow],
+  );
 
   return (
     <main className="relative isolate min-h-dvh w-full overflow-hidden bg-[#f4f8ff] text-[#0C3E63] dark:bg-[#0C3E63] dark:text-[#e9f2ff]">
@@ -320,7 +323,6 @@ export default function RatePage() {
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-3xl items-center px-4 py-8 sm:px-6">
         <Card className="w-full border-[#20539A]/25 bg-white/88 shadow-[0_28px_80px_-32px_rgba(12,62,99,0.6)] backdrop-blur-sm dark:border-[#f0e049]/25 dark:bg-[#0f2f50]/82 dark:shadow-[0_28px_80px_-28px_rgba(6,28,49,0.95)]">
           <CardHeader className="space-y-4 border-b border-[#20539A]/15 pb-6 dark:border-[#f0e049]/15">
-
             <div>
               <CardTitle className="text-2xl tracking-tight text-[#0C3E63] dark:text-[#f4f8ff]">
                 Calificacion de ticket
@@ -350,69 +352,31 @@ export default function RatePage() {
               </div>
             ) : (
               <>
-                <section className="rounded-2xl border border-[#20539A]/20 bg-gradient-to-br from-white to-[#eef5ff] p-5 shadow-sm dark:border-[#f0e049]/20 dark:from-[#143c63] dark:to-[#0f2f50]">
-                  <p className="text-xs uppercase tracking-wide text-[#20539A]/75 dark:text-[#d7e6f7]/80">
-                    Ticket actual
-                  </p>
-                  <p className="mt-2 text-4xl font-semibold tracking-wide text-[#0C3E63] dark:text-[#f4f8ff]">
-                    {ticketState?.code ?? "--"}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Badge
-                      variant="outline"
-                      className="border-[#20539A]/35 bg-white/80 text-[#0C3E63] dark:border-[#f0e049]/45 dark:bg-[#10365c] dark:text-[#e9f2ff]"
-                    >
-                      {ticketState?.status ?? "SIN TICKET"}
-                    </Badge>
-                    {ticketState?.isPaused ? (
-                      <Badge
-                        variant="outline"
-                        className="border-amber-500/40 bg-amber-100/70 text-amber-900 dark:border-amber-300/45 dark:bg-amber-300/15 dark:text-amber-100"
-                      >
-                        PAUSADO
-                      </Badge>
-                    ) : null}
-                    {ticketState?.isRated ? (
-                      <Badge
-                        variant="secondary"
-                        className="bg-emerald-100 text-emerald-900 dark:bg-emerald-400/20 dark:text-emerald-100"
-                      >
-                        CALIFICADO
-                      </Badge>
-                    ) : null}
-                  </div>
-                </section>
-
-               {/*  <section
-                  className={cn(
-                    "rounded-2xl border p-4 text-sm",
-                    ticketState?.isRated
-                      ? "border-emerald-500/40 bg-emerald-50/95 text-emerald-900 dark:border-emerald-300/35 dark:bg-emerald-300/10 dark:text-emerald-100"
-                      : "border-[#20539A]/20 bg-white/60 text-[#184b76] dark:border-[#f0e049]/22 dark:bg-[#103459]/45 dark:text-[#d7e6f7]",
-                  )}
-                >
-                 { <div className="flex items-center gap-2">
-                    {ticketState?.isRated ? (
-                      <CircleCheckBig className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    <p>{statusMessage}</p>
-                  </div>}
-                  {ticketState?.isRated ? (
-                    <p className="mt-2 text-sm font-medium">
-                      Calificacion registrada: {ticketState.rating ?? "-"} / 5
+                {showThankYouMessage ? (
+                  <section className="rounded-2xl border border-emerald-500/40 bg-emerald-50/95 px-6 py-10 text-center text-emerald-900 dark:border-emerald-300/40 dark:bg-emerald-300/10 dark:text-emerald-100">
+                    <CircleCheckBig className="mx-auto h-14 w-14" />
+                    <h2 className="mt-4 text-3xl font-semibold tracking-tight">
+                      Gracias por su calificacion
+                    </h2>
+                    <p className="mt-2 text-sm opacity-90">
+                      Su opinion fue registrada correctamente.
                     </p>
-                  ) : null}
-                </section> */}
+                  </section>
+                ) : null}
 
-                {canRateTicket ? (
-                  <div className="space-y-3" aria-label="Seleccionar calificacion">
-                    <p className="text-sm font-medium text-[#0C3E63] dark:text-[#f4f8ff]">
-                      Seleccione una carita para calificar
+                {showRatingOnly ? (
+                  <section
+                    className="rounded-2xl border border-[#20539A]/25 bg-white/75 px-4 py-8 shadow-sm dark:border-[#f0e049]/30 dark:bg-[#123a61]/75"
+                    aria-label="Seleccionar calificacion"
+                  >
+                    <p className="text-center text-sm font-medium text-[#20539A] dark:text-[#d7e6f7]">
+                      Ticket finalizado
+                    </p>
+                    <p className="mt-2 text-center text-4xl font-semibold tracking-tight text-[#0C3E63] dark:text-[#f4f8ff] sm:text-5xl">
+                      Como fue su atencion?
                     </p>
 
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-5">
                       {FACE_OPTIONS.map((option) => {
                         const Icon = option.icon;
                         const selected = selectedScore === option.score;
@@ -426,7 +390,7 @@ export default function RatePage() {
                               void submitScore(option.score);
                             }}
                             className={cn(
-                              "flex min-h-20 flex-col items-center justify-center rounded-xl border px-2 py-3 text-xs transition-all duration-200",
+                              "flex min-h-28 flex-col items-center justify-center rounded-xl border px-2 py-3 text-sm transition-all duration-200",
                               selected
                                 ? "border-[#20539A] bg-[#dbe8ff] text-[#0C3E63] shadow-sm dark:border-[#f0e049]/80 dark:bg-[#f0e049]/20 dark:text-[#fff7cc]"
                                 : "border-[#20539A]/22 bg-white/75 text-[#1f4f79] hover:bg-[#e7f0ff] dark:border-[#f0e049]/25 dark:bg-[#123a61]/70 dark:text-[#d5e5f8] dark:hover:bg-[#1a4a77]",
@@ -436,7 +400,7 @@ export default function RatePage() {
                           >
                             <Icon
                               className={cn(
-                                "mb-2 h-7 w-7",
+                                "mb-2 h-10 w-10",
                                 selected ? option.colorClassName : "text-muted-foreground",
                               )}
                             />
@@ -447,11 +411,40 @@ export default function RatePage() {
                     </div>
 
                     {isSubmitting ? (
-                      <p className="text-sm text-[#20539A]/85 dark:text-[#d7e6f7]">
+                      <p className="mt-4 text-center text-sm text-[#20539A]/85 dark:text-[#d7e6f7]">
                         Enviando calificacion...
                       </p>
                     ) : null}
-                  </div>
+                  </section>
+                ) : null}
+
+                {showTicketAndStatusCards ? (
+                  <>
+                    <section className="rounded-2xl border border-[#20539A]/20 bg-gradient-to-br from-white to-[#eef5ff] p-5 shadow-sm dark:border-[#f0e049]/20 dark:from-[#143c63] dark:to-[#0f2f50] flex flex-col justify-center items-center">
+                      <p className="text-xs uppercase tracking-wide text-[#20539A]/75 dark:text-[#d7e6f7]/80">
+                        Ticket actual
+                      </p>
+                      <p className="mt-2 text-4xl font-semibold tracking-wide text-[#0C3E63] dark:text-[#f4f8ff]">
+                        {ticketState?.code ?? "--"}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge
+                          variant="outline"
+                          className="border-[#20539A]/35 bg-white/80 text-[#0C3E63] dark:border-[#f0e049]/45 dark:bg-[#10365c] dark:text-[#e9f2ff]"
+                        >
+                          {ticketState?.status ?? "SIN TICKET"}
+                        </Badge>
+                        {ticketState?.isPaused ? (
+                          <Badge
+                            variant="outline"
+                            className="border-amber-500/40 bg-amber-100/70 text-amber-900 dark:border-amber-300/45 dark:bg-amber-300/15 dark:text-amber-100"
+                          >
+                            PAUSADO
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </section>
+                  </>
                 ) : null}
               </>
             )}
