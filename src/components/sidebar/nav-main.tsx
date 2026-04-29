@@ -70,8 +70,6 @@ function filterGroup(
       const subItems = it.items
         ?.filter((s) => canAccess(s.access, accessOpts))
         .filter(Boolean)
-
-      // si era parent con subitems y ya no quedó nada => ocultar parent
       if (it.items?.length && (!subItems || subItems.length === 0)) {
         return null as unknown as NavItem
       }
@@ -98,11 +96,8 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
   const filteredGroups = React.useMemo(() => {
     return (
       groups
-        // ✅ 1) no renderizar grupos vacíos desde config
         .filter((g) => g.items.length > 0)
-        // ✅ 2) filtrar por access
         .map((g) => filterGroup(g, accessOpts))
-        // ✅ 3) no renderizar grupos que quedaron vacíos por permisos
         .filter((g) => g.items.length > 0)
     )
   }, [groups, accessOpts])

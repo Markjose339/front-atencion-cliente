@@ -28,6 +28,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ChevronDown, Search } from "lucide-react"
 import { DataTablePagination } from "./data-table-pagination"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { cn } from "@/lib/utils"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -42,6 +43,7 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string
   searchDebounceMs?: number
   totalItems?: number
+  onRowClick?: (row: TData) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -57,6 +59,7 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = "Buscar...",
   searchDebounceMs = 500,
   totalItems = 0,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   "use no memo" 
 
@@ -110,6 +113,33 @@ export function DataTable<TData, TValue>({
 
   const handleSearchChange = (value: string) => {
     setLocalSearch(value)
+  }
+
+  const isInteractiveTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) {
+      return false
+    }
+
+    return Boolean(
+      target.closest(
+        "button, a, input, select, textarea, [role='button'], [data-row-click-ignore='true']",
+      ),
+    )
+  }
+
+  const handleRowClick = (
+    row: TData,
+    event?: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>,
+  ) => {
+    if (!onRowClick) {
+      return
+    }
+
+    if (event && isInteractiveTarget(event.target)) {
+      return
+    }
+
+    onRowClick(row)
   }
 
   const getHeaderText = (column: Column<TData, unknown>): string => {
@@ -207,7 +237,29 @@ export function DataTable<TData, TValue>({
             </Card>
           ) : table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <Card key={row.id} className="overflow-hidden shadow-sm border border-muted/40 rounded-2xl py-0">
+              <Card
+                key={row.id}
+                className={cn(
+                  "overflow-hidden shadow-sm border border-muted/40 rounded-2xl py-0",
+                  onRowClick
+                    ? "cursor-pointer transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    : undefined,
+                )}
+                role={onRowClick ? "button" : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onClick={onRowClick ? (event) => handleRowClick(row.original, event) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (event) => {
+                        if (event.key !== "Enter" && event.key !== " ") {
+                          return
+                        }
+                        event.preventDefault()
+                        handleRowClick(row.original, event)
+                      }
+                    : undefined
+                }
+              >
                 {row.getVisibleCells().map((cell) => {
                   if (cell.column.id === "imageUrl") {
                     return (
@@ -281,7 +333,29 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    role={onRowClick ? "button" : undefined}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onClick={onRowClick ? (event) => handleRowClick(row.original, event) : undefined}
+                    onKeyDown={
+                      onRowClick
+                        ? (event) => {
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return
+                            }
+                            event.preventDefault()
+                            handleRowClick(row.original, event)
+                          }
+                        : undefined
+                    }
+                    className={cn(
+                      onRowClick
+                        ? "cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        : undefined,
+                    )}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -2,15 +2,20 @@
 
 import { useSyncExternalStore } from "react"
 import { AppSidebar } from "@/components/sidebar/app-sidebar"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
+import { ModeToggle } from "@/components/mode-toggle"
 
 function useIsClient() {
   return useSyncExternalStore(
-    () => () => {}, // subscribe no-op
-    () => true,     // client snapshot
-    () => false     // server snapshot
+    () => () => {},
+    () => true,
+    () => false
   )
 }
 
@@ -18,8 +23,7 @@ function AdminLayoutFallback() {
   return (
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
-        {/* Sidebar skeleton */}
-        <aside className="hidden w-[280px] shrink-0 border-r bg-background md:block">
+        <aside className="hidden w-70 shrink-0 border-r bg-background md:block">
           <div className="p-4">
             <div className="flex items-center gap-3">
               <Skeleton className="h-8 w-8 rounded-lg" />
@@ -42,6 +46,7 @@ function AdminLayoutFallback() {
             </div>
           </div>
         </aside>
+
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-4">
             <div className="flex items-center gap-2">
@@ -96,19 +101,25 @@ function AdminLayoutFallback() {
   )
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const isClient = useIsClient()
-
 
   if (!isClient) return <AdminLayoutFallback />
 
   return (
     <SidebarProvider>
-      <AppSidebar/>
-      <SidebarInset className="min-h-screen">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
+      <AppSidebar />
+      <SidebarInset className="min-h-screen min-w-0">
+        <header className="flex h-16 shrink-0 items-center border-b bg-background px-4">
+          <div className="flex w-full min-w-0 items-center justify-between gap-2">
+            <SidebarTrigger className="-ml-1 shrink-0" />
+            <div className="shrink-0">
+              <ModeToggle />
+            </div>
           </div>
         </header>
 

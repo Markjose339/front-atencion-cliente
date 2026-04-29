@@ -2,12 +2,11 @@ import {
   Building,
   Clock3,
   Frame,
+  History,
   Home,
-  LifeBuoy,
   Map,
   Megaphone,
   MessageSquare,
-  Send,
   Shield,
   Ticket,
   UserCog,
@@ -44,7 +43,6 @@ export type NavGroup = {
 
 export const sidebarData: {
   main: NavGroup[]
-  secondary: { title: string; url: string; icon: LucideIcon }[]
 } = {
   main: [
     {
@@ -57,6 +55,15 @@ export const sidebarData: {
           access: {
             roles: ["administrador"],
           }
+        },
+        {
+          title: "Auditoria",
+          url: "/audit",
+          icon: History,
+          access: {
+            roles: ["administrador"],
+            permissions: ["ver auditoria"],
+          },
         },
         {
           title: "Usuarios",
@@ -149,18 +156,6 @@ export const sidebarData: {
           },
         },
       ],
-    },
-  ],
-  secondary: [
-    {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
     },
   ],
 }

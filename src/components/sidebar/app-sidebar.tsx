@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Command } from "lucide-react"
 
 import { NavMain } from "@/components/sidebar/nav-main"
-import { NavSecondary } from "@/components/sidebar/nav-secondary"
 import { NavUser } from "@/components/sidebar/nav-user"
 import { sidebarData } from "./nav-config"
 
@@ -43,7 +42,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent>
         <NavMain groups={sidebarData.main} />
-        <NavSecondary items={sidebarData.secondary} className="mt-auto" />
       </SidebarContent>
 
       <SidebarFooter>
