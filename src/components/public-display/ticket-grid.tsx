@@ -2,6 +2,7 @@
 
 import { Loader2, Settings2 } from "lucide-react";
 import { motion } from "motion/react";
+import { useRef, useState, useEffect } from "react";
 
 import { PublicDisplayCalledTicket } from "@/types/public-display";
 import { ClientTicketDisplay } from "@/components/public-display/client-ticket-display";
@@ -17,7 +18,19 @@ type TicketGridProps = {
   onOpenSettings: () => void;
 };
 
-const sig = (t: PublicDisplayCalledTicket) => `${t.id}:${t.calledAt ?? t.createdAt}`;
+const sig = (t: PublicDisplayCalledTicket) =>
+  `${t.id}:${t.calledAt ?? t.createdAt}`;
+
+const ROWS = 2;
+
+function getCols(width: number): number {
+  if (width >= 1500) return 6;
+  if (width >= 1200) return 5;
+  if (width >= 950)  return 4;
+  if (width >= 700)  return 3;
+  if (width >= 450)  return 2;
+  return 1;
+}
 
 export function TicketGrid({
   tickets,
@@ -28,10 +41,28 @@ export function TicketGrid({
   onReload,
   onOpenSettings,
 }: TicketGridProps) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(4);
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setCols(getCols(entry.contentRect.width));
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const maxVisible = cols * ROWS;
+  const visibleTickets = tickets.slice(0, maxVisible);
+
   return (
     <div
       className={[
-        "relative min-h-0 overflow-hidden",
+        "relative min-h-0 flex-1 overflow-hidden",
         "bg-[#0D3358]/95 dark:bg-white/86",
         "shadow-[0_28px_52px_-36px_rgba(5,15,30,0.9)]",
         "border-b border-[#00529C]/25 dark:border-[#4A7BA5]/35",
@@ -39,7 +70,7 @@ export function TicketGrid({
     >
       <div className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-transparent via-[#C6A856]/60 to-transparent" />
 
-      <div className="h-full">
+      <div className="h-full p-3" ref={gridRef}>
         {isLoading && (
           <div className="flex h-full items-center justify-center gap-2 text-sm text-[#7BAFD4] dark:text-[#3A6A9A]">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -65,26 +96,32 @@ export function TicketGrid({
         )}
 
         {!isLoading && !errorMessage && tickets.length > 0 && (
-          <div className="grid h-full grid-cols-1 grid-rows-2 gap-3 overflow-auto sm:grid-cols-6">
-            {tickets.map((ticket) => {
+          <div
+            className="h-full"
+            style={{
+              display: "grid",
+              gap: "12px",
+              gridTemplateColumns: `repeat(${cols}, 1fr)`,
+              gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+              overflow: "hidden",
+            }}
+          >
+            {visibleTickets.map((ticket) => {
               const ticketAlertKey = sig(ticket);
               const isRecentlyCalled = highlightedKeySet.has(ticketAlertKey);
 
               return (
                 <motion.div
-                  key={String(ticket.id)}          
-                  layout                           
-                  initial={false}                  
+                  key={String(ticket.id)}
+                  layout
+                  initial={false}
                   animate={{
                     opacity: 1,
                     y: 0,
                     scale: isRecentlyCalled ? 1.03 : 1,
                   }}
-                  transition={{
-                    duration: 0.55,
-                    ease: "easeInOut",
-                  }}
-                  className="transform-gpu will-change-transform"
+                  transition={{ duration: 0.55, ease: "easeInOut" }}
+                  className="transform-gpu will-change-transform min-h-0"
                 >
                   <ClientTicketDisplay
                     code={ticket.code}

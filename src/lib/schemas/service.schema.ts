@@ -11,13 +11,9 @@ export const ServiceSchema = z.object({
     .min(1, "La abreviatura es obligatoria")
     .max(10, "La abreviatura no puede exceder los 10 caracteres"),
 
-  code: z
-    .string("El código debe ser una cadena de texto")
-    .min(1, "El código es obligatorio")
-    .max(5, "El código no puede exceder los 5 caracteres")
-    .regex(/^[A-Z0-9-]+$/, {
-      message: "El código solo puede contener letras mayúsculas, números y guiones",
-    }),
+  code: z.boolean({
+    message: "Debe indicar si el servicio requiere código",
+  }),
 });
 
 export type ServiceSchemaType = z.infer<typeof ServiceSchema>;

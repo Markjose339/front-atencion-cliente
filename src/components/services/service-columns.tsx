@@ -38,10 +38,19 @@ export const serviceColumns = (): ColumnDef<Service>[] => [
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Código
+        Requiere código
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
+    cell: ({ row }) => {
+      const requiresCode = row.original.code;
+
+      return (
+        <span className="rounded-md border px-2 py-1 text-xs">
+          {requiresCode ? "Sí" : "No"}
+        </span>
+      );
+    },
   },
   {
     accessorKey: "createdAt",

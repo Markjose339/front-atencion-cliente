@@ -24,7 +24,7 @@ export function ClientTicketDisplay({
   return (
     <div
       className={cn(
-        "group relative flex h-full items-center justify-center overflow-hidden border p-5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.75)] transition-transform duration-200 hover:-translate-y-0.5 dark:shadow-[0_20px_42px_-32px_rgba(0,0,0,0.85)]",
+        "group relative flex h-full w-full items-center justify-center overflow-hidden border shadow-[0_18px_40px_-30px_rgba(15,23,42,0.75)] transition-transform duration-200 hover:-translate-y-0.5 dark:shadow-[0_20px_42px_-32px_rgba(0,0,0,0.85)]",
         isPreferential
           ? "border-[#D38E2A]/45 bg-[linear-gradient(145deg,#fff9ef_0%,#ffe9bd_54%,#ffd877_100%)] dark:border-[#EECA46]/55 dark:bg-[linear-gradient(145deg,#2c4868_0%,#214463_52%,#1a3a59_100%)]"
           : "border-slate-200/80 bg-white/95 dark:border-[#55779f]/65 dark:bg-[#163a5f]/86",
@@ -33,13 +33,12 @@ export function ClientTicketDisplay({
           : "",
       )}
     >
-      {isRecentlyCalled ? (
+      {isRecentlyCalled && (
         <>
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.26)_0%,rgba(255,255,255,0.1)_48%,transparent_80%)]" />
-          <div className="absolute left-3 top-3 z-20 inline-flex items-center gap-2 rounded-full bg-[#C1121F] px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white shadow-lg">
-          </div>
+          <div className="absolute left-3 top-3 z-20 inline-flex items-center gap-2 rounded-full bg-[#C1121F] px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white shadow-lg" />
         </>
-      ) : null}
+      )}
 
       <div
         className={cn(
@@ -62,28 +61,30 @@ export function ClientTicketDisplay({
         )}
       />
 
-      <div className="relative z-10 flex min-h-36 w-full flex-col items-center justify-center text-center">
+      <div className="relative z-10 flex w-full flex-col items-center justify-center gap-[0.15em] px-2 py-3 text-center">
         <p
           className={cn(
-            "text-6xl font-bold leading-none tracking-[0.08em] sm:text-7xl",
+            "font-bold leading-none tracking-[0.08em]",
             isRecentlyCalled
               ? "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
               : isPreferential
                 ? "text-[#7A4C0D] dark:text-[#fff4d4]"
                 : "text-slate-950 dark:text-[#edf5ff]",
           )}
+          style={{ fontSize: "clamp(2.25rem, 4.5vw, 4rem)" }}
         >
           {code}
         </p>
         <p
           className={cn(
-            "text-4xl font-semibold leading-tight sm:text-5xl",
+            "font-semibold leading-tight",
             isRecentlyCalled
               ? "text-[#ffe9ec]"
               : isPreferential
                 ? "text-[#9C6114] dark:text-[#FDCB35]"
                 : "text-sky-900 dark:text-[#bcd5f5]",
           )}
+          style={{ fontSize: "clamp(1.4rem, 2.8vw, 2.25rem)" }}
         >
           {windowLabel}
         </p>

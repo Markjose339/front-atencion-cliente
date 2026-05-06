@@ -8,7 +8,7 @@ export type PublicService = {
   serviceId: string
   serviceName: string
   abbreviation: string
-  serviceCode: string
+  serviceCode: boolean
 }
 
 export type PublicQueueJoinPayload = {

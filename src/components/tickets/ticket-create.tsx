@@ -3,13 +3,11 @@
 import { useMemo, useState } from "react"
 import {
   ArrowLeft,
-  CheckCircle2,
   Loader2,
   Package,
   ShieldCheck,
   Star,
   Ticket,
-  XCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -18,24 +16,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { usePublicServicesByBranch } from "@/hooks/use-public"
 import { useTicketsMutation } from "@/hooks/use-tickets"
-import { PublicService } from "@/types/public"
 import { Ticket as TicketModel } from "@/types/ticket"
 
 type TicketType = "REGULAR" | "PREFERENCIAL"
-type Step = "service" | "tracking" | "type"
+type Step = "service" | "code" | "type"
 
 type Props = {
   branchId: string
   onPrintTicket?: (ticket: TicketModel) => Promise<boolean>
 }
 
-const isAdmissionService = (service?: PublicService): boolean =>
-  service?.abbreviation?.toUpperCase() === "ADM"
-
 export function TicketCreate({ branchId, onPrintTicket }: Props) {
   const [step, setStep] = useState<Step>("service")
   const [serviceId, setServiceId] = useState("")
-  const [wantsCode, setWantsCode] = useState<boolean | null>(null)
   const [packageCode, setPackageCode] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -58,43 +51,44 @@ export function TicketCreate({ branchId, onPrintTicket }: Props) {
     [availableServices, serviceId],
   )
 
-  const admission = isAdmissionService(selectedService)
-
   const reset = () => {
     setStep("service")
     setServiceId("")
-    setWantsCode(null)
     setPackageCode("")
     setLoading(false)
   }
 
   const handleSelectService = (id: string) => {
     setServiceId(id)
-    setWantsCode(null)
     setPackageCode("")
 
     const picked = availableServices.find((s) => s.serviceId === id)
-    setStep(isAdmissionService(picked) ? "type" : "tracking")
-  }
 
-  const handleTrackingChoice = (hasCode: boolean) => {
-    setWantsCode(hasCode)
-    if (!hasCode) {
-      setPackageCode("")
-      setStep("type")
+    if (picked?.serviceCode) {
+      setStep("code")
+      return
     }
+
+    setStep("type")
   }
 
   const handleContinueWithCode = () => {
     if (!packageCode.trim()) {
-      toast.error("Ingrese el codigo de rastreo")
+      toast.error("Ingrese el código de rastreo")
       return
     }
+
     setStep("type")
   }
 
   const handleCreate = async (type: TicketType) => {
     if (!serviceId || loading) return
+
+    if (selectedService?.serviceCode && !packageCode.trim()) {
+      toast.error("Ingrese el código de rastreo")
+      setStep("code")
+      return
+    }
 
     setLoading(true)
 
@@ -103,13 +97,15 @@ export function TicketCreate({ branchId, onPrintTicket }: Props) {
         branchId,
         serviceId,
         type,
-        packageCode: admission ? null : wantsCode ? packageCode : null,
+        packageCode: selectedService?.serviceCode ? packageCode.trim() : null,
       })
 
       toast.success(`Ticket ${ticket.code} generado`)
+
       if (onPrintTicket) {
         void onPrintTicket(ticket)
       }
+
       reset()
     } catch (error) {
       const message =
@@ -124,13 +120,12 @@ export function TicketCreate({ branchId, onPrintTicket }: Props) {
 
   const goBack = () => {
     if (step === "type") {
-      setStep(admission ? "service" : "tracking")
+      setStep(selectedService?.serviceCode ? "code" : "service")
       return
     }
 
-    if (step === "tracking") {
+    if (step === "code") {
       setStep("service")
-      setWantsCode(null)
       setPackageCode("")
     }
   }
@@ -153,25 +148,22 @@ export function TicketCreate({ branchId, onPrintTicket }: Props) {
                   </div>
                 ) : availableServices.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {availableServices.map((service) => {
-                      const tone =
-                        service.abbreviation.toUpperCase() === "ADM"
-                          ? "primary"
-                          : "neutral"
-
-                      return (
-                        <ChoiceCard
-                          key={service.serviceId}
-                          title={service.serviceName}
-                          description={`Atencion para ${service.serviceCode}`}
-                          badge={service.abbreviation}
-                          icon={<ShieldCheck className="h-7 w-7" />}
-                          tone={tone}
-                          onClick={() => handleSelectService(service.serviceId)}
-                          disabled={loading}
-                        />
-                      )
-                    })}
+                    {availableServices.map((service) => (
+                      <ChoiceCard
+                        key={service.serviceId}
+                        title={service.serviceName}
+                        description={
+                          service.serviceCode 
+                            ? "Este servicio requiere código"
+                            : "Este servicio no requiere código"
+                        }
+                        badge={service.abbreviation}
+                        icon={<ShieldCheck className="h-7 w-7" />}
+                        tone="neutral"
+                        onClick={() => handleSelectService(service.serviceId)}
+                        disabled={loading}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-[#20539A]/35 bg-white/80 p-8 text-center text-sm text-[#20539A] dark:border-[#54769f]/65 dark:bg-[#1e4068]/65 dark:text-[#d2e1f8]">
@@ -181,46 +173,25 @@ export function TicketCreate({ branchId, onPrintTicket }: Props) {
               </div>
             )}
 
-            {step === "tracking" && (
+            {step === "code" && (
               <div className="space-y-5">
-                {wantsCode !== true ? (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <ChoiceCard
-                      title="Si, tengo codigo"
-                      description="Ingresar codigo de rastreo"
-                      badge="Con codigo"
-                      icon={<CheckCircle2 className="h-7 w-7" />}
-                      tone="success"
-                      onClick={() => handleTrackingChoice(true)}
-                      disabled={loading}
-                    />
-                    <ChoiceCard
-                      title="No tengo codigo"
-                      description="Continuar sin codigo"
-                      badge="Sin codigo"
-                      icon={<XCircle className="h-7 w-7" />}
-                      tone="attention"
-                      onClick={() => handleTrackingChoice(false)}
-                      disabled={loading}
-                    />
-                  </div>
-                ) : (
-                  <div className="mx-auto w-full max-w-140 rounded-3xl border-2 border-[#20539A]/60 bg-[#c7dbff] p-5 shadow-lg sm:p-6 dark:border-[#7ea2d3]/55 dark:bg-[#0f2f4e] md:mx-0 md:max-w-none">
-                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0C3E63] dark:text-[#d2e1f8]">
-                      <Package className="h-4 w-4" />
-                      Codigo de rastreo
-                    </label>
+                <div className="mx-auto w-full max-w-140 rounded-3xl border-2 border-[#20539A]/60 bg-[#c7dbff] p-5 shadow-lg sm:p-6 dark:border-[#7ea2d3]/55 dark:bg-[#0f2f4e] md:mx-0 md:max-w-none">
+                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0C3E63] dark:text-[#d2e1f8]">
+                    <Package className="h-4 w-4" />
+                    Código de rastreo
+                  </label>
 
-                    <Input
-                      value={packageCode}
-                      onChange={(e) => setPackageCode(e.target.value.toUpperCase())}
-                      placeholder="Ej: EN000001LP"
-                      className="h-12 rounded-xl bg-white/80 dark:bg-[#0b243b]/70"
-                      disabled={loading}
-                      maxLength={25}
-                    />
-                  </div>
-                )}
+                  <Input
+                    value={packageCode}
+                    onChange={(e) =>
+                      setPackageCode(e.target.value.toUpperCase())
+                    }
+                    placeholder="Ej: EN000001LP"
+                    className="h-12 rounded-xl bg-white/80 dark:bg-[#0b243b]/70"
+                    disabled={loading}
+                    maxLength={25}
+                  />
+                </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <Button
@@ -234,16 +205,14 @@ export function TicketCreate({ branchId, onPrintTicket }: Props) {
                     Volver
                   </Button>
 
-                  {wantsCode === true && (
-                    <Button
-                      type="button"
-                      className="h-11 rounded-xl px-6"
-                      onClick={handleContinueWithCode}
-                      disabled={loading}
-                    >
-                      Continuar
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    className="h-11 rounded-xl px-6"
+                    onClick={handleContinueWithCode}
+                    disabled={loading}
+                  >
+                    Continuar
+                  </Button>
                 </div>
               </div>
             )}
@@ -253,13 +222,14 @@ export function TicketCreate({ branchId, onPrintTicket }: Props) {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <ChoiceCard
                     title="Ticket Regular"
-                    description="Atencion estandar"
+                    description="Atención estándar"
                     badge="Regular"
                     icon={<Ticket className="h-7 w-7" />}
                     tone="primary"
                     onClick={() => handleCreate("REGULAR")}
                     disabled={loading}
                   />
+
                   <ChoiceCard
                     title="Ticket Preferencial"
                     description="Prioridad especial"

@@ -31,6 +31,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function ServiceCreateDialog() {
   const [open, setOpen] = useState(false);
@@ -41,7 +43,7 @@ export function ServiceCreateDialog() {
     defaultValues: {
       name: "",
       abbreviation: "",
-      code: "",
+      code: true,
     },
   });
 
@@ -126,19 +128,29 @@ export function ServiceCreateDialog() {
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Código</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Código (ej: EMS)"
-                      value={field.value}
-                      onChange={(e) => {
-                        const v = e.target.value.toUpperCase().replace(/\s+/g, "");
-                        field.onChange(v);
-                      }}
-                      disabled={create.isPending}
-                    />
+                    <FieldLabel>
+                      <Field orientation="horizontal">
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(Boolean(checked))
+                          }
+                          disabled={create.isPending} // en edit usa update.isPending
+                        />
 
+                        <FieldContent>
+                          <FieldTitle>¿Requiere código?</FieldTitle>
+
+                          <FieldDescription>
+                            Active esta opción si el servicio necesita generar o manejar
+                            códigos de seguimiento.
+                          </FieldDescription>
+                        </FieldContent>
+                      </Field>
+                    </FieldLabel>
                   </FormControl>
+
                   <FormMessage />
                 </FormItem>
               )}

@@ -14,7 +14,7 @@ export interface PublicDisplayCalledTicket {
   branchName: string;
   serviceId: string;
   serviceName: string;
-  serviceCode: string;
+  serviceCode: boolean;
   windowId: string;
   windowName: string;
   calledAt: string | null;

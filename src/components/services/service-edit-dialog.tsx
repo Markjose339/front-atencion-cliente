@@ -27,6 +27,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ServiceEditDialogProps {
   service: Service;
@@ -123,17 +125,29 @@ export default function ServiceEditDialog({
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Código</FormLabel>
                   <FormControl>
-                    <Input
-                      value={field.value}
-                      onChange={(e) => {
-                        const v = e.target.value.toUpperCase().replace(/\s+/g, "");
-                        field.onChange(v);
-                      }}
-                      disabled={update.isPending}
-                    />
+                    <FieldLabel>
+                      <Field orientation="horizontal">
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(Boolean(checked))
+                          }
+                          disabled={update.isPending}
+                        />
+
+                        <FieldContent>
+                          <FieldTitle>¿Requiere código?</FieldTitle>
+
+                          <FieldDescription>
+                            Active esta opción si el servicio necesita generar o manejar
+                            códigos de seguimiento.
+                          </FieldDescription>
+                        </FieldContent>
+                      </Field>
+                    </FieldLabel>
                   </FormControl>
+
                   <FormMessage />
                 </FormItem>
               )}
