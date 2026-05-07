@@ -20,6 +20,18 @@ export const windowColumns = (): ColumnDef<Window>[] => [
       </Button>
     ),
   },
+   {
+    accessorKey: "code",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Codigo
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+  },
   {
     accessorKey: "isActive",
    header: ({ column }) => (
