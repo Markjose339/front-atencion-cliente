@@ -11,23 +11,36 @@ export default function LoginPage() {
             <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
               <GalleryVerticalEnd className="size-4" />
             </div>
-            Correos de Bolivia
+
+            <span className="text-foreground">
+              Correos de Bolivia
+            </span>
           </a>
         </div>
+
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
             <LoginForm />
           </div>
         </div>
       </div>
-      <div className="bg-muted relative hidden lg:block">
+
+      <div className="relative hidden lg:block overflow-hidden">
         <Image
           src="/fondo.jpg"
           alt="fondo"
           fill
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          priority
+          className="
+            absolute inset-0
+            h-full w-full
+            object-cover
+            transition-all duration-500
+            dark:brightness-75
+          "
         />
+        <div className="absolute inset-0 bg-black/10 dark:bg-black/40" />
       </div>
     </div>
-  )
+  );
 }
