@@ -36,11 +36,6 @@ export function BranchActions({ branch }: BranchActionsProps) {
 
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(branch.id)}>
-            Copiar ID de sucursal
-          </DropdownMenuItem>
-
           <DropdownMenuSeparator />
 
           <Protected permissions={["editar sucursales"]}>

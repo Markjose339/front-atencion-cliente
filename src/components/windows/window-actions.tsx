@@ -37,10 +37,6 @@ export function WindowActions({ window }: WindowActionsProps) {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
 
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(window.id)}>
-            Copiar ID
-          </DropdownMenuItem>
-
           <DropdownMenuSeparator />
 
           <Protected permissions={["editar ventanillas"]}>

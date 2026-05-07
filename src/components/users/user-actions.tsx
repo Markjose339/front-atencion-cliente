@@ -28,11 +28,6 @@ export function UserActions({ user }: UserActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => navigator.clipboard.writeText(user.id)}
-          >
-            Copiar ID del usuario
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <Protected permissions={["editar usuarios"]}>
             <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>

@@ -35,13 +35,7 @@ export function RoleActions({ role }: RoleActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => navigator.clipboard.writeText(role.id)}
-          >
-            Copiar ID del rol
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Ver detalles</DropdownMenuItem>
           <Protected permissions={["editar roles"]}>
             <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
               <Pencil className="mr-2 h-4 w-4" />

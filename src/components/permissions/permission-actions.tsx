@@ -39,13 +39,7 @@ export function PermissionActions({ permission }: PermissionActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => navigator.clipboard.writeText(permission.id)}
-          >
-            Copiar ID del permiso
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Ver detalles</DropdownMenuItem>
           <Protected permissions={["editar permisos"]}>
             <DropdownMenuItem onClick={() => setOpenEditDialog(true)}>
               <Pencil className="mr-2 h-4 w-4" />

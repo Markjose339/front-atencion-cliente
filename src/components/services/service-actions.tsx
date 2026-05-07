@@ -37,10 +37,6 @@ export function ServiceActions({ service }: ServiceActionsProps) {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
 
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(service.id)}>
-            Copiar ID del servicio
-          </DropdownMenuItem>
-
           <DropdownMenuSeparator />
 
           <Protected permissions={["editar servicios"]}>
