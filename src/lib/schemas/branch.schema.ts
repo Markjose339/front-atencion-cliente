@@ -29,6 +29,8 @@ export const BranchSchema = z.object({
     .refine((val) => (BOLIVIA_DEPARTMENTS as readonly string[]).includes(val), {
       message: `Departamento inválido. Valores permitidos: ${BOLIVIA_DEPARTMENTS.join(", ")}`,
     }),
+
+  isActive: z.boolean(),
 });
 
 export type BranchSchemaType = z.infer<typeof BranchSchema>;

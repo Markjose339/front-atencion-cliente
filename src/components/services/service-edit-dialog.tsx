@@ -1,5 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
 import {
   Dialog,
   DialogContent,
@@ -8,11 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Service } from "@/types/service";
 import { ServiceSchema, ServiceSchemaType } from "@/lib/schemas/service.schema";
@@ -26,9 +30,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field";
-import { Checkbox } from "@/components/ui/checkbox";
+
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field";
 
 interface ServiceEditDialogProps {
   service: Service;
@@ -49,6 +58,7 @@ export default function ServiceEditDialog({
       name: service.name,
       abbreviation: service.abbreviation,
       code: service.code,
+      isActive: service.isActive,
     },
   });
 
@@ -58,6 +68,7 @@ export default function ServiceEditDialog({
         name: service.name,
         abbreviation: service.abbreviation,
         code: service.code,
+        isActive: service.isActive,
       });
     }
   }, [open, service, form]);
@@ -69,7 +80,7 @@ export default function ServiceEditDialog({
         onOpenChange(false);
         return `Servicio "${data.name}" actualizado exitosamente`;
       },
-      error: (error) => error.message || "Error desconocido",
+      error: (error) => error?.message || "Error desconocido",
     });
   }
 
@@ -109,8 +120,10 @@ export default function ServiceEditDialog({
                     <Input
                       value={field.value}
                       onChange={(e) => {
-                        const v = e.target.value.toUpperCase().replace(/\s+/g, "");
-                        field.onChange(v);
+                        const value = e.target.value
+                          .toUpperCase()
+                          .replace(/\s+/g, "");
+                        field.onChange(value);
                       }}
                       disabled={update.isPending}
                     />
@@ -138,16 +151,45 @@ export default function ServiceEditDialog({
 
                         <FieldContent>
                           <FieldTitle>¿Requiere código?</FieldTitle>
-
                           <FieldDescription>
-                            Active esta opción si el servicio necesita generar o manejar
-                            códigos de seguimiento.
+                            Active esta opción si el servicio necesita generar o
+                            manejar códigos de seguimiento.
                           </FieldDescription>
                         </FieldContent>
                       </Field>
                     </FieldLabel>
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <FieldLabel>
+                      <Field orientation="horizontal">
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(Boolean(checked))
+                          }
+                          disabled={update.isPending}
+                        />
+
+                        <FieldContent>
+                          <FieldTitle>Servicio activo</FieldTitle>
+                          <FieldDescription>
+                            Active esta opción para que el servicio esté
+                            disponible en el sistema.
+                          </FieldDescription>
+                        </FieldContent>
+                      </Field>
+                    </FieldLabel>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -162,6 +204,7 @@ export default function ServiceEditDialog({
               >
                 Cancelar
               </Button>
+
               <Button type="submit" disabled={update.isPending}>
                 {update.isPending ? "Guardando..." : "Actualizar Servicio"}
               </Button>

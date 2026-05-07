@@ -51,7 +51,7 @@ export function BranchDeleteDialog({ branch, open, onOpenChange }: BranchDeleteD
           <div className="flex items-center gap-2 pt-2">
             <span className="text-sm text-muted-foreground">Sucursal</span>
             <Badge variant="destructive">
-              {branch.name} ({branch.name})
+              {branch.name}
             </Badge>
           </div>
         </AlertDialogHeader>

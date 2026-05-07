@@ -3,5 +3,6 @@ export interface Service {
   name: string;
   code: boolean;
   abbreviation: string;
+  isActive: boolean;
   createdAt: string;
 }

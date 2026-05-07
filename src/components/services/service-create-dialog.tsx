@@ -22,6 +22,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   Form,
@@ -31,8 +32,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field";
-import { Checkbox } from "@/components/ui/checkbox";
+
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field";
 
 export function ServiceCreateDialog() {
   const [open, setOpen] = useState(false);
@@ -44,6 +51,7 @@ export function ServiceCreateDialog() {
       name: "",
       abbreviation: "",
       code: true,
+      isActive: true,
     },
   });
 
@@ -52,16 +60,29 @@ export function ServiceCreateDialog() {
       loading: "Creando servicio...",
       success: (data) => {
         setOpen(false);
-        form.reset();
+        form.reset({
+          name: "",
+          abbreviation: "",
+          code: true,
+          isActive: true,
+        });
         return `Servicio "${data.name}" creado exitosamente`;
       },
-      error: (error) => error.message,
+      error: (error) => error?.message || "Error desconocido",
     });
   }
 
   const handleOpenChange = (value: boolean) => {
     setOpen(value);
-    if (!value) form.reset();
+
+    if (!value) {
+      form.reset({
+        name: "",
+        abbreviation: "",
+        code: true,
+        isActive: true,
+      });
+    }
   };
 
   return (
@@ -112,8 +133,10 @@ export function ServiceCreateDialog() {
                       placeholder="Abreviatura (ej: EMS)"
                       value={field.value}
                       onChange={(e) => {
-                        const v = e.target.value.toUpperCase().replace(/\s+/g, "");
-                        field.onChange(v);
+                        const value = e.target.value
+                          .toUpperCase()
+                          .replace(/\s+/g, "");
+                        field.onChange(value);
                       }}
                       disabled={create.isPending}
                     />
@@ -136,21 +159,50 @@ export function ServiceCreateDialog() {
                           onCheckedChange={(checked) =>
                             field.onChange(Boolean(checked))
                           }
-                          disabled={create.isPending} // en edit usa update.isPending
+                          disabled={create.isPending}
                         />
 
                         <FieldContent>
                           <FieldTitle>¿Requiere código?</FieldTitle>
-
                           <FieldDescription>
-                            Active esta opción si el servicio necesita generar o manejar
-                            códigos de seguimiento.
+                            Active esta opción si el servicio necesita generar o
+                            manejar códigos de seguimiento.
                           </FieldDescription>
                         </FieldContent>
                       </Field>
                     </FieldLabel>
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <FieldLabel>
+                      <Field orientation="horizontal">
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(Boolean(checked))
+                          }
+                          disabled={create.isPending}
+                        />
+
+                        <FieldContent>
+                          <FieldTitle>Servicio activo</FieldTitle>
+                          <FieldDescription>
+                            Active esta opción para que el servicio esté
+                            disponible en el sistema.
+                          </FieldDescription>
+                        </FieldContent>
+                      </Field>
+                    </FieldLabel>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -161,7 +213,14 @@ export function ServiceCreateDialog() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => form.reset()}
+                  onClick={() =>
+                    form.reset({
+                      name: "",
+                      abbreviation: "",
+                      code: true,
+                      isActive: true,
+                    })
+                  }
                   disabled={create.isPending}
                 >
                   Cancelar

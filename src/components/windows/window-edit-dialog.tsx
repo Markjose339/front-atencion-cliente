@@ -114,8 +114,6 @@ export default function WindowEditDialog({
                 </FormItem>
               )}
             />
-
-            {/* ✅ Checkbox + Label (como tu ejemplo) */}
             <FormField
               control={form.control}
               name="isActive"

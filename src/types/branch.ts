@@ -3,5 +3,6 @@ export interface Branch {
   name: string;
   address: string;
   departmentName: string;
+  isActive: boolean;
   createdAt: string;
 };

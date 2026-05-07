@@ -14,6 +14,8 @@ export const ServiceSchema = z.object({
   code: z.boolean({
     message: "Debe indicar si el servicio requiere código",
   }),
+  
+  isActive: z.boolean(),
 });
 
 export type ServiceSchemaType = z.infer<typeof ServiceSchema>;

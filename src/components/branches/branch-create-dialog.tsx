@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { PlusCircle } from "lucide-react";
+
 import {
   Dialog,
   DialogClose,
@@ -14,8 +16,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -24,8 +26,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
 import { useBranchesMutation } from "@/hooks/use-branches";
+
 import {
   Select,
   SelectContent,
@@ -33,7 +40,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BOLIVIA_DEPARTMENTS, BranchSchema, BranchSchemaType } from "@/lib/schemas/branch.schema";
+
+import {
+  BOLIVIA_DEPARTMENTS,
+  BranchSchema,
+  BranchSchemaType,
+} from "@/lib/schemas/branch.schema";
 
 export function BranchCreateDialog() {
   const [open, setOpen] = useState(false);
@@ -45,6 +57,7 @@ export function BranchCreateDialog() {
       name: "",
       address: "",
       departmentName: "",
+      isActive: true,
     },
   });
 
@@ -53,16 +66,29 @@ export function BranchCreateDialog() {
       loading: "Creando sucursal...",
       success: (data) => {
         setOpen(false);
-        form.reset();
+        form.reset({
+          name: "",
+          address: "",
+          departmentName: "",
+          isActive: true,
+        });
         return `Sucursal "${data.name}" creada exitosamente`;
       },
-      error: (error) => error.message,
+      error: (error) => error?.message || "Error desconocido",
     });
   }
 
   const handleOpenChange = (value: boolean) => {
     setOpen(value);
-    if (!value) form.reset();
+
+    if (!value) {
+      form.reset({
+        name: "",
+        address: "",
+        departmentName: "",
+        isActive: true,
+      });
+    }
   };
 
   return (
@@ -135,6 +161,7 @@ export function BranchCreateDialog() {
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Seleccione un departamento..." />
                       </SelectTrigger>
+
                       <SelectContent>
                         {BOLIVIA_DEPARTMENTS.map((dep) => (
                           <SelectItem key={dep} value={dep}>
@@ -149,12 +176,49 @@ export function BranchCreateDialog() {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Label className="hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-checked:border-primary has-checked:bg-primary/5">
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => field.onChange(!!checked)}
+                        disabled={create.isPending}
+                      />
+
+                      <div className="grid gap-1.5 font-normal">
+                        <p className="text-sm leading-none font-medium">
+                          Sucursal activa
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          La sucursal estará disponible para su uso en el
+                          sistema.
+                        </p>
+                      </div>
+                    </Label>
+                  </FormControl>
+
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <DialogFooter>
               <DialogClose asChild>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => form.reset()}
+                  onClick={() =>
+                    form.reset({
+                      name: "",
+                      address: "",
+                      departmentName: "",
+                      isActive: true,
+                    })
+                  }
                   disabled={create.isPending}
                 >
                   Cancelar
